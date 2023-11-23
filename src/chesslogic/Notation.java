@@ -1,3 +1,5 @@
+package chesslogic;
+
 public enum Notation {
 
     A1(0), B1(1), C1(2), D1(3), E1(4), F1(5), G1(6), H1(7),

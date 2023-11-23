@@ -1,7 +1,6 @@
+package chesslogic;
+
 public class Piece {
-
-    Notation position;
-
     enum Type {
         PAWN, ROOK, HORSE, BISHOP, QUEEN, KING
     }
@@ -10,10 +9,12 @@ public class Piece {
         WHITE, BLACK
     }
 
+    Notation position;
+
     PieceColor C;
     Type T;
 
-    public Piece(PieceColor c, Type t) {
+    Piece(PieceColor c, Type t) {
         C = c;
         T = t;
     }

@@ -3,6 +3,8 @@
     GitHub: https://github.com/IanC04
  */
 
+package ui;
+
 import javax.swing.*;
 
 public class Game {
