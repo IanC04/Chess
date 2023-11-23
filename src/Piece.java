@@ -1,30 +1,29 @@
-import java.awt.Color;
-
 public class Piece {
+
+    Notation position;
+
     enum Type {
-        PAWN, ROOK, HORSE, BISHOP, QUEEN, KING;
+        PAWN, ROOK, HORSE, BISHOP, QUEEN, KING
     }
 
     enum PieceColor {
-        WHITE(Color.WHITE), BLACK(Color.BLACK);
-        final Color COLOR;
-
-        PieceColor(Color c) {
-            this.COLOR = c;
-        }
+        WHITE, BLACK
     }
 
-    Color C;
+    PieceColor C;
     Type T;
 
-
-    public Piece() {
-        C = Color.WHITE;
-        T = Type.PAWN;
+    public Piece(PieceColor c, Type t) {
+        C = c;
+        T = t;
     }
 
-    boolean move() {
-        return false;
+    boolean setPosition(Notation newPos) {
+        if (newPos == this.position) {
+            return false;
+        }
+        this.position = newPos;
+        return true;
     }
 
     void possibleMoves() {
