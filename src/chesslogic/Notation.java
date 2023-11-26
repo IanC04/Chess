@@ -20,4 +20,11 @@ public enum Notation {
     public byte getPosition() {
         return position;
     }
+
+    public static Notation get(int pos) {
+        if (pos < 0 || pos > 63) {
+            throw new IllegalArgumentException("Position must be between 0 and 63");
+        }
+        return Notation.values()[pos];
+    }
 }

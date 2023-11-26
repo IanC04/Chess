@@ -13,36 +13,45 @@ public class Board {
      */
     private final Piece[] CHESS_BOARD;
 
+    /**
+     * true if white's turn, false if black's
+     */
+    boolean whiteToPlay;
+
     public Board() {
         CHESS_BOARD = new Piece[64];
+        whiteToPlay = true;
         resetBoard();
     }
 
     void resetBoard() {
         Arrays.fill(CHESS_BOARD, A2.getPosition(), H2.getPosition(),
-                new Piece(WHITE, PAWN));
+                new Piece(WHITE, PAWN, this));
         Arrays.fill(CHESS_BOARD, A7.getPosition(), H7.getPosition(),
-                new Piece(BLACK, PAWN));
+                new Piece(BLACK, PAWN, this));
 
-        CHESS_BOARD[A1.getPosition()] = new Piece(WHITE, ROOK);
-        CHESS_BOARD[B1.getPosition()] = new Piece(WHITE, HORSE);
-        CHESS_BOARD[C1.getPosition()] = new Piece(WHITE, BISHOP);
-        CHESS_BOARD[D1.getPosition()] = new Piece(WHITE, QUEEN);
-        CHESS_BOARD[E1.getPosition()] = new Piece(WHITE, KING);
-        CHESS_BOARD[F1.getPosition()] = new Piece(WHITE, BISHOP);
-        CHESS_BOARD[G1.getPosition()] = new Piece(WHITE, HORSE);
-        CHESS_BOARD[H1.getPosition()] = new Piece(WHITE, ROOK);
-        CHESS_BOARD[A8.getPosition()] = new Piece(BLACK, ROOK);
-        CHESS_BOARD[B8.getPosition()] = new Piece(BLACK, HORSE);
-        CHESS_BOARD[C8.getPosition()] = new Piece(BLACK, BISHOP);
-        CHESS_BOARD[D8.getPosition()] = new Piece(BLACK, QUEEN);
-        CHESS_BOARD[E8.getPosition()] = new Piece(BLACK, KING);
-        CHESS_BOARD[F8.getPosition()] = new Piece(BLACK, BISHOP);
-        CHESS_BOARD[G8.getPosition()] = new Piece(BLACK, HORSE);
-        CHESS_BOARD[H8.getPosition()] = new Piece(BLACK, ROOK);
+        CHESS_BOARD[A1.getPosition()] = new Piece(WHITE, ROOK, this);
+        CHESS_BOARD[B1.getPosition()] = new Piece(WHITE, HORSE, this);
+        CHESS_BOARD[C1.getPosition()] = new Piece(WHITE, BISHOP, this);
+        CHESS_BOARD[D1.getPosition()] = new Piece(WHITE, QUEEN, this);
+        CHESS_BOARD[E1.getPosition()] = new Piece(WHITE, KING, this);
+        CHESS_BOARD[F1.getPosition()] = new Piece(WHITE, BISHOP, this);
+        CHESS_BOARD[G1.getPosition()] = new Piece(WHITE, HORSE, this);
+        CHESS_BOARD[H1.getPosition()] = new Piece(WHITE, ROOK, this);
+        CHESS_BOARD[A8.getPosition()] = new Piece(BLACK, ROOK, this);
+        CHESS_BOARD[B8.getPosition()] = new Piece(BLACK, HORSE, this);
+        CHESS_BOARD[C8.getPosition()] = new Piece(BLACK, BISHOP, this);
+        CHESS_BOARD[D8.getPosition()] = new Piece(BLACK, QUEEN, this);
+        CHESS_BOARD[E8.getPosition()] = new Piece(BLACK, KING, this);
+        CHESS_BOARD[F8.getPosition()] = new Piece(BLACK, BISHOP, this);
+        CHESS_BOARD[G8.getPosition()] = new Piece(BLACK, HORSE, this);
+        CHESS_BOARD[H8.getPosition()] = new Piece(BLACK, ROOK, this);
 
         // Clear middle of board
         Arrays.fill(CHESS_BOARD, A3.getPosition(), H6.getPosition() + 1, null);
+
+        // White goes first
+        whiteToPlay = true;
     }
 
     private void movePiece(Notation oldPos, Notation newPos) {
@@ -64,5 +73,35 @@ public class Board {
                 output.append(piece);
         }
         return output.toString();
+    }
+
+    boolean isFree(Notation pos) {
+        return CHESS_BOARD[pos.getPosition()] == null;
+    }
+
+    /**
+     * Returns true if the piece at pos is friendly (same color)
+     *
+     * @param col
+     * @param pos
+     * @return
+     */
+    boolean isFriendly(Piece.PieceColor col, Notation pos) {
+        return CHESS_BOARD[pos.getPosition()].C == col;
+    }
+
+    /**
+     * Returns true if the piece at pos is an enemy (different color)
+     *
+     * @param col
+     * @param pos
+     * @return
+     */
+    boolean isEnemy(Piece.PieceColor col, Notation pos) {
+        return CHESS_BOARD[pos.getPosition()] != null && CHESS_BOARD[pos.getPosition()].C != col;
+    }
+
+    boolean inBounds(int pos) {
+        return pos >= 0 && pos < 64;
     }
 }
