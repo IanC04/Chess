@@ -1,4 +1,4 @@
-package chesslogic;
+package logic;
 
 public enum Notation {
 
@@ -27,7 +27,7 @@ public enum Notation {
         if (r < 0 || r > 63 || c < 0 || c > 63) {
             throw new IllegalArgumentException("Position must be between [0, 0] x [7, 7]");
         }
-        return Notation.get(String.format("%c%c", (char) (r + 65), (char) (c + 49)));
+        return Notation.get(String.format("%c%c", (char) (c + 65), (char) (r + 49)));
     }
 
     public static Notation get(String name) {

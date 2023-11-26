@@ -1,10 +1,10 @@
-package chesslogic;
+package logic;
 
 import java.util.Arrays;
 
-import static chesslogic.Notation.*;
-import static chesslogic.Piece.PieceColor.*;
-import static chesslogic.Piece.Type.*;
+import static logic.Notation.*;
+import static logic.Piece.PieceColor.*;
+import static logic.Piece.Type.*;
 
 public class Board {
 
@@ -25,46 +25,51 @@ public class Board {
     }
 
     void resetBoard() {
-        Arrays.fill(CHESS_BOARD[A2.getPosition()[0]], new Piece(WHITE, PAWN, this));
-        Arrays.fill(CHESS_BOARD[A7.getPosition()[0]], new Piece(BLACK, PAWN, this));
+        // Both sets of pawns
+        for (int i = 0; i < CHESS_BOARD.length; ++i) {
+            Notation nW = Notation.get(A2.getPosition()[0], i);
+            Notation nB = Notation.get(A7.getPosition()[0], i);
+            CHESS_BOARD[nW.getPosition()[0]][i] = new Piece(WHITE, PAWN, nW, this);
+            CHESS_BOARD[nB.getPosition()[0]][i] = new Piece(BLACK, PAWN, nB, this);
+        }
 
         byte[] pos;
 
         // White pieces
         pos = A1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, A1, this);
         pos = B1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, B1, this);
         pos = C1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, C1, this);
         pos = D1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, QUEEN, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, QUEEN, D1, this);
         pos = E1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, KING, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, KING, E1, this);
         pos = F1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, F1, this);
         pos = G1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, G1, this);
         pos = H1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, H1, this);
 
         // Black pieces
         pos = A8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, A8, this);
         pos = B8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, B8, this);
         pos = C8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, C8, this);
         pos = D8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, QUEEN, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, QUEEN, D8, this);
         pos = E8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, KING, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, KING, E8, this);
         pos = F8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, F8, this);
         pos = G8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, G8, this);
         pos = H8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, H8, this);
 
         // Clear middle of board
         for (int i = 2; i <= 5; i++) {
@@ -85,21 +90,6 @@ public class Board {
         if (!success) {
             throw new IllegalArgumentException("Piece already exists at " + newPos);
         }
-    }
-
-    public String toString() {
-        StringBuilder output = new StringBuilder();
-        for (Piece[] row : CHESS_BOARD) {
-            for (Piece piece : row) {
-                if (piece == null) {
-                    output.append(" ");
-                } else {
-                    output.append(piece);
-                }
-            }
-            output.append("\n");
-        }
-        return output.toString();
     }
 
     boolean isFree(Notation pos) {
@@ -137,5 +127,16 @@ public class Board {
 
     boolean inBounds(int row, int col) {
         return row >= 0 && row < 8 && col >= 0 && col < 8;
+    }
+
+    public String toString() {
+        StringBuilder output = new StringBuilder();
+        for (Piece[] row : CHESS_BOARD) {
+            for (Piece piece : row) {
+                output.append(piece == null ? ' ' : piece);
+            }
+            output.append('\n');
+        }
+        return output.toString();
     }
 }

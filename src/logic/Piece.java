@@ -1,10 +1,9 @@
-package chesslogic;
+package logic;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static chesslogic.Notation.*;
-import static chesslogic.Piece.PieceColor.*;
+import static logic.Piece.PieceColor.*;
 
 public class Piece {
     enum Type {
@@ -17,20 +16,21 @@ public class Piece {
 
     Notation position;
 
-    PieceColor C;
+    final PieceColor C;
     Type T;
 
     /**
      * Reference to the board this piece is on
      */
-    private Board board;
+    private final Board board;
 
     private boolean hasMoved;
 
-    Piece(PieceColor c, Type t, Board b) {
+    Piece(PieceColor c, Type t, Notation n, Board b) {
         C = c;
         T = t;
         board = b;
+        position = n;
         hasMoved = false;
     }
 
@@ -56,6 +56,7 @@ public class Piece {
 
     /**
      * Get all possible moves for a pawn
+     * TODO: Implement en passant
      *
      * @return
      */
@@ -84,6 +85,12 @@ public class Piece {
         return moves;
     }
 
+    /**
+     * Get all possible moves for a rook
+     * TODO: Implement castling
+     *
+     * @return
+     */
     private Set<Notation> possibleRookMoves() {
         Set<Notation> moves = new HashSet<>();
         byte[] posArr = position.getPosition();
@@ -232,14 +239,27 @@ public class Piece {
         return moves;
     }
 
+    /**
+     * Returns the unicode character for this piece
+     *
+     * @return
+     */
+    public char getUnicode() {
+        return switch (T) {
+            case PAWN -> C == WHITE ? '♙' : '♟';
+            case ROOK -> C == WHITE ? '♖' : '♜';
+            case HORSE -> C == WHITE ? '♘' : '♞';
+            case BISHOP -> C == WHITE ? '♗' : '♝';
+            case QUEEN -> C == WHITE ? '♕' : '♛';
+            case KING -> C == WHITE ? '♔' : '♚';
+        };
+    }
+
+    public Notation getPosition() {
+        return position;
+    }
+
     public String toString() {
-        return String.format("%s%s@%s", C == WHITE ? "W" : "B", switch (T) {
-            case PAWN -> "P";
-            case ROOK -> "R";
-            case HORSE -> "H";
-            case BISHOP -> "B";
-            case QUEEN -> "Q";
-            case KING -> "K";
-        }, position);
+        return Character.toString(getUnicode());
     }
 }
