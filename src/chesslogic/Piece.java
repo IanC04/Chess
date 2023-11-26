@@ -49,8 +49,8 @@ public class Piece {
             case ROOK -> possibleRookMoves();
             case HORSE -> possibleHorseMoves();
             case BISHOP -> possibleBishopMoves();
-            case QUEEN -> queenMoves();
-            case KING -> kingMoves();
+            case QUEEN -> possibleQueenMoves();
+            case KING -> possibleKingMoves();
         };
     }
 
@@ -62,22 +62,23 @@ public class Piece {
     private Set<Notation> possiblePawnMoves() {
         Set<Notation> moves = new HashSet<>();
         int direction = C == WHITE ? 1 : -1;
-        int pos = position.getPosition();
+        byte[] posArr = position.getPosition();
 
         // If pawn on starting square, can move 2 squares if not blocked
-        if (!hasMoved && board.isFree(Notation.get(pos + 8 * direction)) && board.isFree(Notation.get(pos + 16 * direction))) {
-            moves.add(Notation.get(pos + 16 * direction));
+        if (!hasMoved && board.isFree(Notation.get(posArr[0] + direction, posArr[1])) && board.isFree(Notation.get(posArr[0] + 2 * direction, posArr[1]))) {
+            moves.add(Notation.get(posArr[0] + 2 * direction, posArr[1]));
         }
 
 
-        int[] possible = {pos + 7 * direction, pos + 9 * direction};
-        for (int i : possible) {
-            if (board.inBounds(i) && board.isEnemy(C, Notation.get(i))) {
-                moves.add(Notation.get(i));
+        int[][] possible = {{posArr[0] + direction, posArr[1] - 1}, {posArr[0] + direction,
+                posArr[1] + 1}};
+        for (int[] i : possible) {
+            if (board.inBounds(i[0], i[1]) && board.isEnemy(C, Notation.get(i[0], i[1]))) {
+                moves.add(Notation.get(i[0], i[1]));
             }
         }
-        if (board.inBounds(pos + 8 * direction) && board.isFree(Notation.get(pos + 8 * direction))) {
-            moves.add(Notation.get(pos + 8 * direction));
+        if (board.inBounds(posArr[0] + direction, posArr[1]) && board.isFree(Notation.get(posArr[0] + direction, +posArr[1]))) {
+            moves.add(Notation.get(posArr[0] + direction, posArr[1]));
         }
 
         return moves;
@@ -85,48 +86,48 @@ public class Piece {
 
     private Set<Notation> possibleRookMoves() {
         Set<Notation> moves = new HashSet<>();
-        int pos = position.getPosition();
+        byte[] posArr = position.getPosition();
 
         // Check squares to the right
-        for (int i = pos + 1; i % 8 != 0; i++) {
-            if (board.isFriendly(C, Notation.get(i))) {
+        for (int i = posArr[1] + 1; i < 8; ++i) {
+            if (board.isFriendly(C, Notation.get(posArr[0], i))) {
                 break;
             }
-            moves.add(Notation.get(i));
-            if (board.isEnemy(C, Notation.get(i))) {
+            moves.add(Notation.get(posArr[0], i));
+            if (board.isEnemy(C, Notation.get(posArr[0], i))) {
                 break;
             }
         }
 
         // Check squares to the left
-        for (int i = pos - 1; i % 8 != 7; i--) {
-            if (board.isFriendly(C, Notation.get(i))) {
+        for (int i = posArr[1] - 1; i >= 0; --i) {
+            if (board.isFriendly(C, Notation.get(posArr[0], i))) {
                 break;
             }
-            moves.add(Notation.get(i));
-            if (board.isEnemy(C, Notation.get(i))) {
+            moves.add(Notation.get(posArr[0], i));
+            if (board.isEnemy(C, Notation.get(posArr[0], i))) {
                 break;
             }
         }
 
         // Check squares above
-        for (int i = pos + 8; i < 64; i += 8) {
-            if (board.isFriendly(C, Notation.get(i))) {
+        for (int i = posArr[0] + 1; i < 8; ++i) {
+            if (board.isFriendly(C, Notation.get(i, posArr[1]))) {
                 break;
             }
-            moves.add(Notation.get(i));
-            if (board.isEnemy(C, Notation.get(i))) {
+            moves.add(Notation.get(i, posArr[1]));
+            if (board.isEnemy(C, Notation.get(i, posArr[1]))) {
                 break;
             }
         }
 
         // Check squares below
-        for (int i = pos - 8; i >= 0; i -= 8) {
-            if (board.isFriendly(C, Notation.get(i))) {
+        for (int i = posArr[0] - 1; i >= 0; --i) {
+            if (board.isFriendly(C, Notation.get(i, posArr[1]))) {
                 break;
             }
-            moves.add(Notation.get(i));
-            if (board.isEnemy(C, Notation.get(i))) {
+            moves.add(Notation.get(i, posArr[1]));
+            if (board.isEnemy(C, Notation.get(i, posArr[1]))) {
                 break;
             }
         }
@@ -136,13 +137,15 @@ public class Piece {
 
     private Set<Notation> possibleHorseMoves() {
         Set<Notation> moves = new HashSet<>();
-        int pos = position.getPosition();
-        int[] possible = {pos + 17, pos + 10, pos - 6, pos - 15, pos - 17, pos - 10, pos + 6,
-                pos + 15};
+        byte[] posArr = position.getPosition();
+        int[][] possible = {{posArr[0] + 2, posArr[1] + 1}, {posArr[0] + 1, posArr[1] + 2},
+                {posArr[0] - 1, posArr[1] + 2}, {posArr[0] - 2, posArr[1] + 1}, {posArr[0] - 2,
+                posArr[1] - 1}, {posArr[0] - 1, posArr[1] - 2}, {posArr[0] + 1, posArr[1] - 2},
+                {posArr[0] + 2, posArr[1] - 1}};
 
-        for (int i : possible) {
-            if (board.inBounds(i) && !board.isFriendly(C, Notation.get(i))) {
-                moves.add(Notation.get(i));
+        for (int[] i : possible) {
+            if (board.inBounds(i[0], i[1]) && !board.isFriendly(C, Notation.get(i[0], i[1]))) {
+                moves.add(Notation.get(i[0], i[1]));
             }
         }
 
@@ -151,49 +154,78 @@ public class Piece {
 
     private Set<Notation> possibleBishopMoves() {
         Set<Notation> moves = new HashSet<>();
-        int pos = position.getPosition();
+        byte[] posArr = position.getPosition();
 
         // Check squares to the upper right
-        for (int i = pos + 9; i % 8 != 0 && i < 64; i += 9) {
-            if (board.isFriendly(C, Notation.get(i))) {
+        for (int i = 1; i < 8; ++i) {
+            if (!board.inBounds(posArr[0] + i, posArr[1] + i) && board.isFriendly(C,
+                    Notation.get(posArr[0] + i, posArr[1] + i))) {
                 break;
             }
-            moves.add(Notation.get(i));
-            if (board.isEnemy(C, Notation.get(i))) {
+            moves.add(Notation.get(posArr[0] + i, posArr[1] + i));
+            if (board.isEnemy(C, Notation.get(posArr[0] + i, posArr[1] + i))) {
                 break;
             }
         }
 
         // Check squares to the lower right
-        for (int i = pos - 7; i % 8 != 0 && i >= 0; i -= 7) {
-            if (board.isFriendly(C, Notation.get(i))) {
+        for (int i = 1; i < 8; ++i) {
+            if (!board.inBounds(posArr[0] - i, posArr[1] + i) && board.isFriendly(C,
+                    Notation.get(posArr[0] - i, posArr[1] + i))) {
                 break;
             }
-            moves.add(Notation.get(i));
-            if (board.isEnemy(C, Notation.get(i))) {
+            moves.add(Notation.get(posArr[0] - i, posArr[1] + i));
+            if (board.isEnemy(C, Notation.get(posArr[0] - i, posArr[1] + i))) {
                 break;
             }
         }
 
         // Check squares to the lower left
-        for (int i = pos - 9; i % 8 != 7 && i >= 0; i -= 9) {
-            if (board.isFriendly(C, Notation.get(i))) {
+        for (int i = 1; i < 8; ++i) {
+            if (!board.inBounds(posArr[0] - i, posArr[1] - i) && board.isFriendly(C,
+                    Notation.get(posArr[0] - i, posArr[1] - i))) {
                 break;
             }
-            moves.add(Notation.get(i));
-            if (board.isEnemy(C, Notation.get(i))) {
+            moves.add(Notation.get(posArr[0] - i, posArr[1] - i));
+            if (board.isEnemy(C, Notation.get(posArr[0] - i, posArr[1] - i))) {
                 break;
             }
         }
 
         // Check squares to the upper left
-        for (int i = pos + 7; i % 8 != 7 && i < 64; i += 7) {
-            if (board.isFriendly(C, Notation.get(i))) {
+        for (int i = 1; i < 8; ++i) {
+            if (!board.inBounds(posArr[0] + i, posArr[1] - i) && board.isFriendly(C,
+                    Notation.get(posArr[0] + i, posArr[1] - i))) {
                 break;
             }
-            moves.add(Notation.get(i));
-            if (board.isEnemy(C, Notation.get(i))) {
+            moves.add(Notation.get(posArr[0] + i, posArr[1] - i));
+            if (board.isEnemy(C, Notation.get(posArr[0] + i, posArr[1] - i))) {
                 break;
+            }
+        }
+
+        return moves;
+    }
+
+    private Set<Notation> possibleQueenMoves() {
+        Set<Notation> moves = new HashSet<>();
+        moves.addAll(possibleRookMoves());
+        moves.addAll(possibleBishopMoves());
+
+        return moves;
+    }
+
+    private Set<Notation> possibleKingMoves() {
+        Set<Notation> moves = new HashSet<>();
+        byte[] posArr = position.getPosition();
+        int[][] possible = {{posArr[0] + 1, posArr[1]}, {posArr[0] + 1, posArr[1] + 1},
+                {posArr[0], posArr[1] + 1}, {posArr[0] - 1, posArr[1] + 1}, {posArr[0] - 1,
+                posArr[1]}, {posArr[0] - 1, posArr[1] - 1}, {posArr[0], posArr[1] - 1},
+                {posArr[0] + 1, posArr[1] - 1}};
+
+        for (int[] i : possible) {
+            if (board.inBounds(i[0], i[1]) && !board.isFriendly(C, Notation.get(i[0], i[1]))) {
+                moves.add(Notation.get(i[0], i[1]));
             }
         }
 

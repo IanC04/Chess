@@ -2,29 +2,35 @@ package chesslogic;
 
 public enum Notation {
 
-    A1(0), B1(1), C1(2), D1(3), E1(4), F1(5), G1(6), H1(7),
-    A2(8), B2(9), C2(10), D2(11), E2(12), F2(13), G2(14), H2(15),
-    A3(16), B3(17), C3(18), D3(19), E3(20), F3(21), G3(22), H3(23),
-    A4(24), B4(25), C4(26), D4(27), E4(28), F4(29), G4(30), H4(31),
-    A5(32), B5(33), C5(34), D5(35), E5(36), F5(37), G5(38), H5(39),
-    A6(40), B6(41), C6(42), D6(43), E6(44), F6(45), G6(46), H6(47),
-    A7(48), B7(49), C7(50), D7(51), E7(52), F7(53), G7(54), H7(55),
-    A8(56), B8(57), C8(58), D8(59), E8(60), F8(61), G8(62), H8(63);
+    A1(0, 0), B1(0, 1), C1(0, 2), D1(0, 3), E1(0, 4), F1(0, 5), G1(0, 6), H1(0, 7),
+    A2(1, 0), B2(1, 1), C2(1, 2), D2(1, 3), E2(1, 4), F2(1, 5), G2(1, 6), H2(1, 7),
+    A3(2, 0), B3(2, 1), C3(2, 2), D3(2, 3), E3(2, 4), F3(2, 5), G3(2, 6), H3(2, 7),
+    A4(3, 0), B4(3, 1), C4(3, 2), D4(3, 3), E4(3, 4), F4(3, 5), G4(3, 6), H4(3, 7),
+    A5(4, 0), B5(4, 1), C5(4, 2), D5(4, 3), E5(4, 4), F5(4, 5), G5(4, 6), H5(4, 7),
+    A6(5, 0), B6(5, 1), C6(5, 2), D6(5, 3), E6(5, 4), F6(5, 5), G6(5, 6), H6(5, 7),
+    A7(6, 0), B7(6, 1), C7(6, 2), D7(6, 3), E7(6, 4), F7(6, 5), G7(6, 6), H7(6, 7),
+    A8(7, 0), B8(7, 1), C8(7, 2), D8(7, 3), E8(7, 4), F8(7, 5), G8(7, 6), H8(7, 7);
 
-    private final byte position;
+    private final byte row;
+    private final byte col;
 
-    Notation(int value) {
-        this.position = (byte) value;
+    Notation(int r, int c) {
+        this.row = (byte) r;
+        this.col = (byte) c;
     }
 
-    public byte getPosition() {
-        return position;
+    public byte[] getPosition() {
+        return new byte[]{row, col};
     }
 
-    public static Notation get(int pos) {
-        if (pos < 0 || pos > 63) {
-            throw new IllegalArgumentException("Position must be between 0 and 63");
+    public static Notation get(int r, int c) {
+        if (r < 0 || r > 63 || c < 0 || c > 63) {
+            throw new IllegalArgumentException("Position must be between [0, 0] x [7, 7]");
         }
-        return Notation.values()[pos];
+        return Notation.get(String.format("%c%c", (char) (r + 65), (char) (c + 49)));
+    }
+
+    public static Notation get(String name) {
+        return Notation.valueOf(name);
     }
 }
