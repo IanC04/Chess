@@ -80,16 +80,26 @@ public class Board {
         whiteToPlay = true;
     }
 
-    private void movePiece(Notation oldPos, Notation newPos) {
-        byte[] oldPosArr = oldPos.getPosition();
-        byte[] newPosArr = oldPos.getPosition();
-        if (CHESS_BOARD[oldPosArr[0]][oldPosArr[1]] == null) {
+    /**
+     * Moves the piece at oldPos to newPos
+     * Returns the piece that was captured, or null if no piece was captured
+     *
+     * @param oldPos
+     * @param newPos
+     * @return
+     */
+    private Piece movePiece(Notation oldPos, Notation newPos) {
+        if (getPiece(oldPos) == null) {
             throw new IllegalArgumentException("No piece exists at " + oldPos);
         }
-        boolean success = CHESS_BOARD[oldPosArr[0]][oldPosArr[1]].setPosition(newPos);
+
+        Piece captured = getPiece(newPos);
+        boolean success = getPiece(oldPos).setPosition(newPos);
         if (!success) {
             throw new IllegalArgumentException("Piece already exists at " + newPos);
         }
+
+        return captured;
     }
 
     /**
@@ -103,13 +113,25 @@ public class Board {
         return CHESS_BOARD[posArr[0]][posArr[1]];
     }
 
+    /**
+     * Returns the piece at the given position
+     *
+     * @param row
+     * @param col
+     * @return
+     */
     public Piece getPiece(int row, int col) {
         return CHESS_BOARD[row][col];
     }
 
+    /**
+     * Returns true if the piece at pos is free (no piece)
+     *
+     * @param pos
+     * @return
+     */
     boolean isFree(Notation pos) {
-        byte[] posArr = pos.getPosition();
-        return CHESS_BOARD[posArr[0]][posArr[1]] == null;
+        return getPiece(pos) == null;
     }
 
     /**
@@ -120,8 +142,11 @@ public class Board {
      * @return
      */
     boolean isFriendly(Piece.PieceColor col, Notation pos) {
-        byte[] posArr = pos.getPosition();
-        return CHESS_BOARD[posArr[0]][posArr[1]].C == col;
+        Piece piece = getPiece(pos);
+        if (piece == null) {
+            return false;
+        }
+        return piece.C == col;
     }
 
     /**
@@ -132,8 +157,12 @@ public class Board {
      * @return
      */
     boolean isEnemy(Piece.PieceColor col, Notation pos) {
-        byte[] posArr = pos.getPosition();
-        return CHESS_BOARD[posArr[0]][posArr[1]] != null && CHESS_BOARD[posArr[0]][posArr[1]].C != col;
+//        return !isFree(pos) && !isFriendly(col, pos);
+        Piece piece = getPiece(pos);
+        if (piece == null) {
+            return false;
+        }
+        return piece.C != col;
     }
 
     boolean inBounds(int pos) {
