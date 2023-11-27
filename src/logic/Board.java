@@ -92,6 +92,21 @@ public class Board {
         }
     }
 
+    /**
+     * Returns the piece at the given position
+     *
+     * @param pos
+     * @return
+     */
+    Piece getPiece(Notation pos) {
+        byte[] posArr = pos.getPosition();
+        return CHESS_BOARD[posArr[0]][posArr[1]];
+    }
+
+    public Piece getPiece(int row, int col) {
+        return CHESS_BOARD[row][col];
+    }
+
     boolean isFree(Notation pos) {
         byte[] posArr = pos.getPosition();
         return CHESS_BOARD[posArr[0]][posArr[1]] == null;
@@ -131,8 +146,8 @@ public class Board {
 
     public String toString() {
         StringBuilder output = new StringBuilder();
-        for (Piece[] row : CHESS_BOARD) {
-            for (Piece piece : row) {
+        for (int i = CHESS_BOARD.length - 1; i >= 0; --i) {
+            for (Piece piece : CHESS_BOARD[i]) {
                 output.append(piece == null ? ' ' : piece);
             }
             output.append('\n');
