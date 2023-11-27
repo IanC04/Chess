@@ -34,6 +34,21 @@ public class Piece {
         hasMoved = false;
     }
 
+    /**
+     * Returns the bit representation of this piece
+     * @return
+     */
+    public int getBitRepresentation() {
+        return switch (T) {
+            case PAWN -> C == WHITE ? 0b0001 : 0b1001;
+            case ROOK -> C == WHITE ? 0b0010 : 0b1010;
+            case HORSE -> C == WHITE ? 0b0011 : 0b1011;
+            case BISHOP -> C == WHITE ? 0b0100 : 0b1100;
+            case QUEEN -> C == WHITE ? 0b0101 : 0b1101;
+            case KING -> C == WHITE ? 0b0110 : 0b1110;
+        };
+    }
+
     boolean setPosition(Notation newPos) {
         if (newPos == this.position) {
             return false;

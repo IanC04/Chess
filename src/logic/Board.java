@@ -173,6 +173,25 @@ public class Board {
         return row >= 0 && row < 8 && col >= 0 && col < 8;
     }
 
+    /**
+     * Returns the bitboard representation of the board
+     *
+     * @return
+     */
+    public int[][] getBitBoard() {
+        int[][] bitBoard = new int[CHESS_BOARD.length][CHESS_BOARD[0].length];
+        for (int i = 0; i < CHESS_BOARD.length; ++i) {
+            for (int j = 0; j < CHESS_BOARD[i].length; ++j) {
+                Piece piece = CHESS_BOARD[i][j];
+                if (piece == null) {
+                    continue;
+                }
+                bitBoard[i][j] = piece.getBitRepresentation();
+            }
+        }
+        return bitBoard;
+    }
+
     public String toString() {
         StringBuilder output = new StringBuilder();
         for (int i = CHESS_BOARD.length - 1; i >= 0; --i) {
