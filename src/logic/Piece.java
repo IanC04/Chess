@@ -14,10 +14,10 @@ public class Piece {
         WHITE, BLACK
     }
 
-    Notation position;
+    private Notation position;
 
     final PieceColor C;
-    Type T;
+    final Type T;
 
     /**
      * Reference to the board this piece is on
@@ -36,7 +36,8 @@ public class Piece {
 
     /**
      * Returns the bit representation of this piece
-     * @return
+     *
+     * @return bit representation
      */
     public int getBitRepresentation() {
         return switch (T) {
@@ -73,7 +74,7 @@ public class Piece {
      * Get all possible moves for a pawn
      * TODO: Implement en passant
      *
-     * @return
+     * @return set of possible moves
      */
     private Set<Notation> possiblePawnMoves() {
         Set<Notation> moves = new HashSet<>();
@@ -89,11 +90,11 @@ public class Piece {
         int[][] possible = {{posArr[0] + direction, posArr[1] - 1}, {posArr[0] + direction,
                 posArr[1] + 1}};
         for (int[] i : possible) {
-            if (board.inBounds(i[0], i[1]) && board.isEnemy(C, Notation.get(i[0], i[1]))) {
+            if (Board.inBounds(i[0], i[1]) && board.isEnemy(C, Notation.get(i[0], i[1]))) {
                 moves.add(Notation.get(i[0], i[1]));
             }
         }
-        if (board.inBounds(posArr[0] + direction, posArr[1]) && board.isFree(Notation.get(posArr[0] + direction, +posArr[1]))) {
+        if (Board.inBounds(posArr[0] + direction, posArr[1]) && board.isFree(Notation.get(posArr[0] + direction, +posArr[1]))) {
             moves.add(Notation.get(posArr[0] + direction, posArr[1]));
         }
 
@@ -104,7 +105,7 @@ public class Piece {
      * Get all possible moves for a rook
      * TODO: Implement castling
      *
-     * @return
+     * @return set of possible moves
      */
     private Set<Notation> possibleRookMoves() {
         Set<Notation> moves = new HashSet<>();
@@ -166,7 +167,7 @@ public class Piece {
                 {posArr[0] + 2, posArr[1] - 1}};
 
         for (int[] i : possible) {
-            if (board.inBounds(i[0], i[1]) && !board.isFriendly(C, Notation.get(i[0], i[1]))) {
+            if (Board.inBounds(i[0], i[1]) && !board.isFriendly(C, Notation.get(i[0], i[1]))) {
                 moves.add(Notation.get(i[0], i[1]));
             }
         }
@@ -180,7 +181,7 @@ public class Piece {
 
         // Check squares to the upper right
         for (int i = 1; i < 8; ++i) {
-            if (!board.inBounds(posArr[0] + i, posArr[1] + i) && board.isFriendly(C,
+            if (!Board.inBounds(posArr[0] + i, posArr[1] + i) || board.isFriendly(C,
                     Notation.get(posArr[0] + i, posArr[1] + i))) {
                 break;
             }
@@ -192,7 +193,7 @@ public class Piece {
 
         // Check squares to the lower right
         for (int i = 1; i < 8; ++i) {
-            if (!board.inBounds(posArr[0] - i, posArr[1] + i) && board.isFriendly(C,
+            if (!Board.inBounds(posArr[0] - i, posArr[1] + i) || board.isFriendly(C,
                     Notation.get(posArr[0] - i, posArr[1] + i))) {
                 break;
             }
@@ -204,7 +205,7 @@ public class Piece {
 
         // Check squares to the lower left
         for (int i = 1; i < 8; ++i) {
-            if (!board.inBounds(posArr[0] - i, posArr[1] - i) && board.isFriendly(C,
+            if (!Board.inBounds(posArr[0] - i, posArr[1] - i) || board.isFriendly(C,
                     Notation.get(posArr[0] - i, posArr[1] - i))) {
                 break;
             }
@@ -216,7 +217,7 @@ public class Piece {
 
         // Check squares to the upper left
         for (int i = 1; i < 8; ++i) {
-            if (!board.inBounds(posArr[0] + i, posArr[1] - i) && board.isFriendly(C,
+            if (!Board.inBounds(posArr[0] + i, posArr[1] - i) || board.isFriendly(C,
                     Notation.get(posArr[0] + i, posArr[1] - i))) {
                 break;
             }
@@ -246,7 +247,7 @@ public class Piece {
                 {posArr[0] + 1, posArr[1] - 1}};
 
         for (int[] i : possible) {
-            if (board.inBounds(i[0], i[1]) && !board.isFriendly(C, Notation.get(i[0], i[1]))) {
+            if (Board.inBounds(i[0], i[1]) && !board.isFriendly(C, Notation.get(i[0], i[1]))) {
                 moves.add(Notation.get(i[0], i[1]));
             }
         }
@@ -257,7 +258,7 @@ public class Piece {
     /**
      * Returns the unicode character for this piece
      *
-     * @return
+     * @return unicode character
      */
     public char getUnicode() {
         return switch (T) {
@@ -270,10 +271,16 @@ public class Piece {
         };
     }
 
+    /**
+     * Getter for position field
+     *
+     * @return position
+     */
     public Notation getPosition() {
         return position;
     }
 
+    @Override
     public String toString() {
         return Character.toString(getUnicode());
     }

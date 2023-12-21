@@ -24,7 +24,7 @@ public enum Notation {
     }
 
     public static Notation get(int r, int c) {
-        if (r < 0 || r > 63 || c < 0 || c > 63) {
+        if (r < 0 || r > 7 || c < 0 || c > 7) {
             throw new IllegalArgumentException("Position must be between [0, 0] x [7, 7]");
         }
         return Notation.get(String.format("%c%c", (char) (c + 65), (char) (r + 49)));

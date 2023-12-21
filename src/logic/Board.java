@@ -1,6 +1,9 @@
 package logic;
 
+import ai.Minimax;
+
 import java.util.Arrays;
+import java.util.Set;
 
 import static logic.Notation.*;
 import static logic.Piece.PieceColor.*;
@@ -16,15 +19,24 @@ public class Board {
     /**
      * true if white's turn, false if black's
      */
-    boolean whiteToPlay;
+    private boolean whiteToPlay;
+
+    /**
+     * AI minimax algorithm
+     */
+    private final Minimax ai;
 
     public Board() {
         CHESS_BOARD = new Piece[8][8];
         whiteToPlay = true;
+        ai = new Minimax(this);
         resetBoard();
     }
 
-    void resetBoard() {
+    /**
+     * Resets the board to the initial position
+     */
+    public void resetBoard() {
         // Both sets of pawns
         for (int i = 0; i < CHESS_BOARD.length; ++i) {
             Notation nW = Notation.get(A2.getPosition()[0], i);
@@ -84,31 +96,39 @@ public class Board {
      * Moves the piece at oldPos to newPos
      * Returns the piece that was captured, or null if no piece was captured
      *
-     * @param oldPos
-     * @param newPos
-     * @return
+     * @param oldPos original position
+     * @param newPos new position
+     * @return the captured piece, if any
      */
-    private Piece movePiece(Notation oldPos, Notation newPos) {
+    public Piece movePiece(Notation oldPos, Notation newPos) {
         if (getPiece(oldPos) == null) {
             throw new IllegalArgumentException("No piece exists at " + oldPos);
+        }
+        if (getPiece(oldPos).C != (whiteToPlay ? WHITE : BLACK)) {
+            throw new IllegalArgumentException("Piece color does not match turn");
         }
 
         Piece captured = getPiece(newPos);
         boolean success = getPiece(oldPos).setPosition(newPos);
-        if (!success) {
+        if (success) {
+            byte[] newPosArr = newPos.getPosition();
+            CHESS_BOARD[newPosArr[0]][newPosArr[1]] = getPiece(oldPos);
+            byte[] oldPosArr = oldPos.getPosition();
+            CHESS_BOARD[oldPosArr[0]][oldPosArr[1]] = null;
+        } else {
             throw new IllegalArgumentException("Piece already exists at " + newPos);
         }
-
+        whiteToPlay = !whiteToPlay;
         return captured;
     }
 
     /**
      * Returns the piece at the given position
      *
-     * @param pos
-     * @return
+     * @param pos position
+     * @return piece at pos
      */
-    Piece getPiece(Notation pos) {
+    public Piece getPiece(Notation pos) {
         byte[] posArr = pos.getPosition();
         return CHESS_BOARD[posArr[0]][posArr[1]];
     }
@@ -116,19 +136,32 @@ public class Board {
     /**
      * Returns the piece at the given position
      *
-     * @param row
-     * @param col
-     * @return
+     * @param row index
+     * @param col index
+     * @return piece at pos
      */
     public Piece getPiece(int row, int col) {
         return CHESS_BOARD[row][col];
     }
 
     /**
+     * Returns all possible moves of the piece at pos
+     *
+     * @param pos position
+     * @return set of possible moves
+     */
+    public Set<Notation> getPossibleMoves(Notation pos) {
+        if (isFree(pos)) {
+            throw new IllegalArgumentException("No piece exists at " + pos);
+        }
+        return getPiece(pos).possibleMoves();
+    }
+
+    /**
      * Returns true if the piece at pos is free (no piece)
      *
-     * @param pos
-     * @return
+     * @param pos position
+     * @return true if free
      */
     boolean isFree(Notation pos) {
         return getPiece(pos) == null;
@@ -137,9 +170,9 @@ public class Board {
     /**
      * Returns true if the piece at pos is friendly (same color)
      *
-     * @param col
-     * @param pos
-     * @return
+     * @param col piece color
+     * @param pos position
+     * @return true if friendly
      */
     boolean isFriendly(Piece.PieceColor col, Notation pos) {
         Piece piece = getPiece(pos);
@@ -152,12 +185,12 @@ public class Board {
     /**
      * Returns true if the piece at pos is an enemy (different color)
      *
-     * @param col
-     * @param pos
-     * @return
+     * @param col piece color
+     * @param pos position
+     * @return true if enemy
      */
     boolean isEnemy(Piece.PieceColor col, Notation pos) {
-//        return !isFree(pos) && !isFriendly(col, pos);
+        // return !isFree(pos) && !isFriendly(col, pos);
         Piece piece = getPiece(pos);
         if (piece == null) {
             return false;
@@ -165,18 +198,42 @@ public class Board {
         return piece.C != col;
     }
 
-    boolean inBounds(int pos) {
+    /**
+     * Returns true if the given position is in bounds
+     *
+     * @param pos Flattened representation of position
+     * @return true if in bounds
+     */
+    public static boolean inBounds(int pos) {
         return pos >= 0 && pos < 64;
     }
 
-    boolean inBounds(int row, int col) {
+    /**
+     * Returns true if the given position is in bounds
+     *
+     * @param pos position
+     * @return true if in bounds
+     */
+    public static boolean inBounds(Notation pos) {
+        byte[] posArr = pos.getPosition();
+        return posArr[0] >= 0 && posArr[0] < 8 && posArr[1] >= 0 && posArr[1] < 8;
+    }
+
+    /**
+     * Returns true if the given position is in bounds
+     *
+     * @param row index
+     * @param col index
+     * @return true if in bounds
+     */
+    public static boolean inBounds(int row, int col) {
         return row >= 0 && row < 8 && col >= 0 && col < 8;
     }
 
     /**
      * Returns the bitboard representation of the board
      *
-     * @return
+     * @return bitboard
      */
     public int[][] getBitBoard() {
         int[][] bitBoard = new int[CHESS_BOARD.length][CHESS_BOARD[0].length];
@@ -192,6 +249,26 @@ public class Board {
         return bitBoard;
     }
 
+    /**
+     * Returns the color of the player whose turn it is
+     *
+     * @return string name of the color
+     */
+    public String turn() {
+        return whiteToPlay ? "White" : "Black";
+    }
+
+    public void aiMove() {
+        Notation[] move = ai.getBestMove(whiteToPlay);
+        movePiece(move[0], move[1]);
+    }
+
+    /**
+     * Outputs the board in a human-readable format
+     *
+     * @return string representation of the board
+     */
+    @Override
     public String toString() {
         StringBuilder output = new StringBuilder();
         for (int i = CHESS_BOARD.length - 1; i >= 0; --i) {
