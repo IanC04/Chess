@@ -14,10 +14,8 @@ public class Piece {
         WHITE, BLACK
     }
 
-    private Notation position;
-
-    final PieceColor C;
-    final Type T;
+    private final PieceColor C;
+    private final Type T;
 
     /**
      * Reference to the board this piece is on
@@ -26,12 +24,23 @@ public class Piece {
 
     private boolean hasMoved;
 
-    Piece(PieceColor c, Type t, Notation n, Board b) {
+    Piece(PieceColor c, Type t, Board b) {
         C = c;
         T = t;
         board = b;
-        position = n;
         hasMoved = false;
+    }
+
+    void moved() {
+        this.hasMoved = true;
+    }
+
+    public boolean isWhite() {
+        return C.equals(WHITE);
+    }
+
+    PieceColor getColor() {
+        return C;
     }
 
     /**
@@ -50,23 +59,15 @@ public class Piece {
         };
     }
 
-    boolean setPosition(Notation newPos) {
-        if (newPos == this.position) {
-            return false;
-        }
-        this.position = newPos;
-        hasMoved = true;
-        return true;
-    }
 
-    Set<Notation> possibleMoves() {
+    Set<Notation> possibleMoves(Notation pos) {
         return switch (T) {
-            case PAWN -> possiblePawnMoves();
-            case ROOK -> possibleRookMoves();
-            case HORSE -> possibleHorseMoves();
-            case BISHOP -> possibleBishopMoves();
-            case QUEEN -> possibleQueenMoves();
-            case KING -> possibleKingMoves();
+            case PAWN -> possiblePawnMoves(pos);
+            case ROOK -> possibleRookMoves(pos);
+            case HORSE -> possibleHorseMoves(pos);
+            case BISHOP -> possibleBishopMoves(pos);
+            case QUEEN -> possibleQueenMoves(pos);
+            case KING -> possibleKingMoves(pos);
         };
     }
 
@@ -76,10 +77,10 @@ public class Piece {
      *
      * @return set of possible moves
      */
-    private Set<Notation> possiblePawnMoves() {
+    private Set<Notation> possiblePawnMoves(Notation pos) {
         Set<Notation> moves = new HashSet<>();
         int direction = C == WHITE ? 1 : -1;
-        byte[] posArr = position.getPosition();
+        byte[] posArr = pos.getPosition();
 
         // If pawn on starting square, can move 2 squares if not blocked
         if (!hasMoved && board.isFree(Notation.get(posArr[0] + direction, posArr[1])) && board.isFree(Notation.get(posArr[0] + 2 * direction, posArr[1]))) {
@@ -107,9 +108,9 @@ public class Piece {
      *
      * @return set of possible moves
      */
-    private Set<Notation> possibleRookMoves() {
+    private Set<Notation> possibleRookMoves(Notation pos) {
         Set<Notation> moves = new HashSet<>();
-        byte[] posArr = position.getPosition();
+        byte[] posArr = pos.getPosition();
 
         // Check squares to the right
         for (int i = posArr[1] + 1; i < 8; ++i) {
@@ -158,9 +159,9 @@ public class Piece {
         return moves;
     }
 
-    private Set<Notation> possibleHorseMoves() {
+    private Set<Notation> possibleHorseMoves(Notation pos) {
         Set<Notation> moves = new HashSet<>();
-        byte[] posArr = position.getPosition();
+        byte[] posArr = pos.getPosition();
         int[][] possible = {{posArr[0] + 2, posArr[1] + 1}, {posArr[0] + 1, posArr[1] + 2},
                 {posArr[0] - 1, posArr[1] + 2}, {posArr[0] - 2, posArr[1] + 1}, {posArr[0] - 2,
                 posArr[1] - 1}, {posArr[0] - 1, posArr[1] - 2}, {posArr[0] + 1, posArr[1] - 2},
@@ -175,9 +176,9 @@ public class Piece {
         return moves;
     }
 
-    private Set<Notation> possibleBishopMoves() {
+    private Set<Notation> possibleBishopMoves(Notation pos) {
         Set<Notation> moves = new HashSet<>();
-        byte[] posArr = position.getPosition();
+        byte[] posArr = pos.getPosition();
 
         // Check squares to the upper right
         for (int i = 1; i < 8; ++i) {
@@ -230,17 +231,17 @@ public class Piece {
         return moves;
     }
 
-    private Set<Notation> possibleQueenMoves() {
+    private Set<Notation> possibleQueenMoves(Notation pos) {
         Set<Notation> moves = new HashSet<>();
-        moves.addAll(possibleRookMoves());
-        moves.addAll(possibleBishopMoves());
+        moves.addAll(possibleRookMoves(pos));
+        moves.addAll(possibleBishopMoves(pos));
 
         return moves;
     }
 
-    private Set<Notation> possibleKingMoves() {
+    private Set<Notation> possibleKingMoves(Notation pos) {
         Set<Notation> moves = new HashSet<>();
-        byte[] posArr = position.getPosition();
+        byte[] posArr = pos.getPosition();
         int[][] possible = {{posArr[0] + 1, posArr[1]}, {posArr[0] + 1, posArr[1] + 1},
                 {posArr[0], posArr[1] + 1}, {posArr[0] - 1, posArr[1] + 1}, {posArr[0] - 1,
                 posArr[1]}, {posArr[0] - 1, posArr[1] - 1}, {posArr[0], posArr[1] - 1},
@@ -253,6 +254,10 @@ public class Piece {
         }
 
         return moves;
+    }
+
+    int getScore(Notation pos) {
+        return Math.abs(7 - pos.getPosition()[0]) + Math.abs(7 - pos.getPosition()[1]);
     }
 
     /**
@@ -271,13 +276,25 @@ public class Piece {
         };
     }
 
+
     /**
-     * Getter for position field
+     * Returns the piece represented by the bit representation
      *
-     * @return position
+     * @param bitRepresentation bit representation specified in Piece class
+     * @return unicode character
      */
-    public Notation getPosition() {
-        return position;
+    public static char getPiece(int bitRepresentation) {
+        boolean isWhite = (bitRepresentation & 0b1000) == 0;
+        return switch (bitRepresentation) {
+            case 0b0001, 0b1001 -> isWhite ? '♙' : '♟';
+            case 0b0010, 0b1010 -> isWhite ? '♖' : '♜';
+            case 0b0011, 0b1011 -> isWhite ? '♘' : '♞';
+            case 0b0100, 0b1100 -> isWhite ? '♗' : '♝';
+            case 0b0101, 0b1101 -> isWhite ? '♕' : '♛';
+            case 0b0110, 0b1110 -> isWhite ? '♔' : '♚';
+            default ->
+                    throw new IllegalArgumentException("Invalid bit representation: " + Integer.toBinaryString(bitRepresentation));
+        };
     }
 
     @Override

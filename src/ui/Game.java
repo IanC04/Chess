@@ -77,6 +77,7 @@ class UIBoard extends JPanel {
         this.uiStatusBar = uiStatusBar;
         logicBoard = new Board();
         squares = new JButton[8][8];
+        currentGreenSquares = null;
         initializeBoard();
     }
 
@@ -154,16 +155,19 @@ class UIBoard extends JPanel {
                 squares[pos[0]][pos[1]].setBackground(Color.GREEN);
             }
         } else {
-            for (Notation n : currentGreenSquares) {
-                byte[] pos = n.getPosition();
-                squares[pos[0]][pos[1]].setBackground((pos[0] + pos[1]) % 2 == 0 ?
-                        LIGHT_SQUARE : DARK_SQUARE);
+            if (currentGreenSquares != null) {
+                for (Notation n : currentGreenSquares) {
+                    byte[] pos = n.getPosition();
+                    squares[pos[0]][pos[1]].setBackground((pos[0] + pos[1]) % 2 == 0 ?
+                            LIGHT_SQUARE : DARK_SQUARE);
+                }
+                if (currentGreenSquares.contains(notation)) {
+                    System.out.println("Move " + squareSelected + " to " + notation);
+                    Piece captured = logicBoard.movePiece(squareSelected, notation);
+                    // logicBoard.aiMove();
+                }
             }
-            if (currentGreenSquares.contains(notation)) {
-                System.out.println("Move " + squareSelected + " to " + notation);
-                Piece captured = logicBoard.movePiece(squareSelected, notation);
-                logicBoard.aiMove();
-            }
+            currentGreenSquares = null;
             squareSelected = null;
         }
 

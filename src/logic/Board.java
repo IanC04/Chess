@@ -27,10 +27,24 @@ public class Board {
     private final Minimax ai;
 
     public Board() {
-        CHESS_BOARD = new Piece[8][8];
-        whiteToPlay = true;
-        ai = new Minimax(this);
+        this.CHESS_BOARD = new Piece[8][8];
+        this.whiteToPlay = true;
+        this.ai = new Minimax(this);
         resetBoard();
+    }
+
+    /**
+     * Must be used only when generating temporary boards
+     *
+     * @param board to copy
+     */
+    public Board(Board board) {
+        this.CHESS_BOARD = new Piece[8][8];
+        this.whiteToPlay = board.whiteToPlay;
+        this.ai = null;
+        for (int i = 0; i < 8; ++i) {
+            System.arraycopy(board.CHESS_BOARD[i], 0, this.CHESS_BOARD[i], 0, 8);
+        }
     }
 
     /**
@@ -41,47 +55,47 @@ public class Board {
         for (int i = 0; i < CHESS_BOARD.length; ++i) {
             Notation nW = Notation.get(A2.getPosition()[0], i);
             Notation nB = Notation.get(A7.getPosition()[0], i);
-            CHESS_BOARD[nW.getPosition()[0]][i] = new Piece(WHITE, PAWN, nW, this);
-            CHESS_BOARD[nB.getPosition()[0]][i] = new Piece(BLACK, PAWN, nB, this);
+            CHESS_BOARD[nW.getPosition()[0]][i] = new Piece(WHITE, PAWN, this);
+            CHESS_BOARD[nB.getPosition()[0]][i] = new Piece(BLACK, PAWN, this);
         }
 
         byte[] pos;
 
         // White pieces
         pos = A1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, A1, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, this);
         pos = B1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, B1, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, this);
         pos = C1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, C1, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, this);
         pos = D1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, QUEEN, D1, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, QUEEN, this);
         pos = E1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, KING, E1, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, KING, this);
         pos = F1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, F1, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, this);
         pos = G1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, G1, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, this);
         pos = H1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, H1, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, this);
 
         // Black pieces
         pos = A8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, A8, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, this);
         pos = B8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, B8, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, this);
         pos = C8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, C8, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, this);
         pos = D8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, QUEEN, D8, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, QUEEN, this);
         pos = E8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, KING, E8, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, KING, this);
         pos = F8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, F8, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, this);
         pos = G8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, G8, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, this);
         pos = H8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, H8, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, this);
 
         // Clear middle of board
         for (int i = 2; i <= 5; i++) {
@@ -104,21 +118,26 @@ public class Board {
         if (getPiece(oldPos) == null) {
             throw new IllegalArgumentException("No piece exists at " + oldPos);
         }
-        if (getPiece(oldPos).C != (whiteToPlay ? WHITE : BLACK)) {
+        if (getPiece(oldPos).getColor() != (whiteToPlay ? WHITE : BLACK)) {
             throw new IllegalArgumentException("Piece color does not match turn");
         }
+        getPiece(oldPos).moved();
+        Piece captured = aiMovePiece(oldPos, newPos);
+        whiteToPlay = !whiteToPlay;
 
+        return captured;
+    }
+
+    public Piece aiMovePiece(Notation oldPos, Notation newPos) {
         Piece captured = getPiece(newPos);
-        boolean success = getPiece(oldPos).setPosition(newPos);
-        if (success) {
+        if (oldPos.equals(newPos)) {
+            throw new IllegalArgumentException("Piece already exists at " + newPos);
+        } else {
             byte[] newPosArr = newPos.getPosition();
             CHESS_BOARD[newPosArr[0]][newPosArr[1]] = getPiece(oldPos);
             byte[] oldPosArr = oldPos.getPosition();
             CHESS_BOARD[oldPosArr[0]][oldPosArr[1]] = null;
-        } else {
-            throw new IllegalArgumentException("Piece already exists at " + newPos);
         }
-        whiteToPlay = !whiteToPlay;
         return captured;
     }
 
@@ -154,7 +173,7 @@ public class Board {
         if (isFree(pos)) {
             throw new IllegalArgumentException("No piece exists at " + pos);
         }
-        return getPiece(pos).possibleMoves();
+        return getPiece(pos).possibleMoves(pos);
     }
 
     /**
@@ -179,7 +198,7 @@ public class Board {
         if (piece == null) {
             return false;
         }
-        return piece.C == col;
+        return piece.getColor() == col;
     }
 
     /**
@@ -195,7 +214,7 @@ public class Board {
         if (piece == null) {
             return false;
         }
-        return piece.C != col;
+        return piece.getColor() != col;
     }
 
     /**
@@ -261,6 +280,18 @@ public class Board {
     public void aiMove() {
         Notation[] move = ai.getBestMove(whiteToPlay);
         movePiece(move[0], move[1]);
+    }
+
+    public int evaluate(boolean whiteToPlay) {
+        int score = 0;
+        for (Notation notation : Notation.values()) {
+            Piece piece = getPiece(notation);
+            if (piece == null || isEnemy(whiteToPlay ? BLACK : WHITE, notation)) {
+                continue;
+            }
+            score += piece.getScore(notation);
+        }
+        return score;
     }
 
     /**
