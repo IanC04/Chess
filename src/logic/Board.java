@@ -7,7 +7,7 @@ import java.util.Set;
 
 import static logic.Notation.*;
 import static logic.Piece.PieceColor.*;
-import static logic.Piece.Type.*;
+import static logic.Piece.PieceType.*;
 
 public class Board {
 
@@ -22,9 +22,17 @@ public class Board {
     private boolean whiteToPlay;
 
     /**
+     * The current game turn
+     */
+    private int turn;
+
+    /**
      * AI minimax algorithm
      */
     private final Minimax ai;
+
+    // Location of the kings
+    private Notation[] kings;
 
     public Board() {
         this.CHESS_BOARD = new Piece[8][8];
@@ -45,6 +53,8 @@ public class Board {
         for (int i = 0; i < 8; ++i) {
             System.arraycopy(board.CHESS_BOARD[i], 0, this.CHESS_BOARD[i], 0, 8);
         }
+        this.turn = board.turn;
+        this.kings = board.kings;
     }
 
     /**
@@ -104,6 +114,8 @@ public class Board {
 
         // White goes first
         whiteToPlay = true;
+        turn = 1;
+        kings = new Notation[]{E1, E8};
     }
 
     /**
@@ -114,31 +126,120 @@ public class Board {
      * @param newPos new position
      * @return the captured piece, if any
      */
-    public Piece movePiece(Notation oldPos, Notation newPos) {
+    private Piece movePieceNormal(Notation oldPos, Notation newPos) {
+        Piece piece = getPiece(oldPos);
+        Piece captured = getPiece(newPos);
+        if (piece.getType() == PAWN && Math.abs(oldPos.getPosition()[0] - newPos.getPosition()[0]) == 2) {
+            piece.setDoubleMove();
+        }
+        updateBoard(oldPos, newPos);
+
+        piece.moved(turn);
+        whiteToPlay = !whiteToPlay;
+        ++turn;
+
+        return captured;
+    }
+
+    private Piece movePieceEnPassant(Notation oldPos, Notation newPos) throws IllegalArgumentException {
+        Piece piece = getPiece(oldPos);
+        Piece captured = getPiece(newPos);
+        if (captured != null) {
+            throw new IllegalArgumentException("En-passant into a piece " + newPos);
+        }
+        if (piece.getType() != PAWN) {
+            throw new IllegalArgumentException("En-passant not from a pawn");
+        }
+        updateBoard(oldPos, newPos);
+        captured = getPiece(Notation.get(oldPos.getPosition()[0], newPos.getPosition()[1]));
+        CHESS_BOARD[oldPos.getPosition()[0]][newPos.getPosition()[1]] = null;
+
+        piece.moved(turn);
+        whiteToPlay = !whiteToPlay;
+        ++turn;
+
+        return captured;
+    }
+
+    private Piece movePieceCastle(Notation oldPos, Notation newPos) throws IllegalArgumentException {
+        Piece piece = getPiece(oldPos);
+        Piece captured = getPiece(newPos);
+        if (piece.getType() != KING) {
+            throw new IllegalArgumentException("Castling not from a king");
+        }
+        if (captured != null) {
+            throw new IllegalArgumentException("Castling into a piece " + newPos);
+        }
+        updateBoard(oldPos, newPos);
+        updateBoard(Notation.get(oldPos.getPosition()[0], (newPos.getPosition()[1] > oldPos.getPosition()[1]) ? 7 : 0),
+                Notation.get(oldPos.getPosition()[0], (newPos.getPosition()[1] > oldPos.getPosition()[1]) ? 5 : 3));
+
+        piece.moved(turn);
+        whiteToPlay = !whiteToPlay;
+        ++turn;
+
+        return null;
+    }
+
+    private Piece movePiecePromotion(Notation oldPos, Notation newPos,
+                                     Piece.PieceType promotionType) throws IllegalArgumentException {
+        Piece piece = getPiece(oldPos);
+        if (piece.getType() != PAWN) {
+            throw new IllegalArgumentException("Promotion not from a pawn");
+        }
+        Piece captured = getPiece(newPos);
+        updateBoard(oldPos, newPos);
+
+        piece = new Piece(piece.getColor(), promotionType, this);
+        CHESS_BOARD[newPos.getPosition()[0]][newPos.getPosition()[1]] = piece;
+
+        piece.moved(turn);
+        whiteToPlay = !whiteToPlay;
+        ++turn;
+
+        return captured;
+    }
+
+    public Piece movePiece(Move move) throws IllegalArgumentException {
+        Notation oldPos = move.start();
+        Notation newPos = move.end();
+        if (oldPos.equals(newPos)) {
+            throw new IllegalArgumentException("Moving nowhere");
+        }
         if (getPiece(oldPos) == null) {
             throw new IllegalArgumentException("No piece exists at " + oldPos);
         }
         if (getPiece(oldPos).getColor() != (whiteToPlay ? WHITE : BLACK)) {
             throw new IllegalArgumentException("Piece color does not match turn");
         }
-        getPiece(oldPos).moved();
-        Piece captured = aiMovePiece(oldPos, newPos);
-        whiteToPlay = !whiteToPlay;
 
-        return captured;
+        switch (move.moveType()) {
+            case NORMAL -> {
+                return movePieceNormal(oldPos, newPos);
+            }
+            case EN_PASSANT -> {
+                return movePieceEnPassant(oldPos, newPos);
+            }
+            case CASTLE -> {
+                return movePieceCastle(oldPos, newPos);
+            }
+            case PROMOTION -> {
+                // TODO: Add functionality for promotion
+                return movePiecePromotion(oldPos, newPos, QUEEN);
+            }
+            default -> throw new IllegalArgumentException("Promotion not implemented");
+        }
     }
 
-    public Piece aiMovePiece(Notation oldPos, Notation newPos) {
-        Piece captured = getPiece(newPos);
-        if (oldPos.equals(newPos)) {
-            throw new IllegalArgumentException("Piece already exists at " + newPos);
-        } else {
-            byte[] newPosArr = newPos.getPosition();
-            CHESS_BOARD[newPosArr[0]][newPosArr[1]] = getPiece(oldPos);
-            byte[] oldPosArr = oldPos.getPosition();
-            CHESS_BOARD[oldPosArr[0]][oldPosArr[1]] = null;
-        }
-        return captured;
+    private void updateBoard(Notation oldPos, Notation newPos) {
+        byte[] newPosArr = newPos.getPosition();
+        CHESS_BOARD[newPosArr[0]][newPosArr[1]] = getPiece(oldPos);
+        byte[] oldPosArr = oldPos.getPosition();
+        CHESS_BOARD[oldPosArr[0]][oldPosArr[1]] = null;
+    }
+
+    public void updateBoard(Move move) {
+        updateBoard(move.start(), move.end());
     }
 
     /**
@@ -164,16 +265,43 @@ public class Board {
     }
 
     /**
+     * Getter for the current game turn
+     *
+     * @return turn
+     */
+    public int getTurn() {
+        return turn;
+    }
+
+    /**
      * Returns all possible moves of the piece at pos
      *
      * @param pos position
      * @return set of possible moves
      */
-    public Set<Notation> getPossibleMoves(Notation pos) {
+    public Set<Move> getPossibleMoves(Notation pos) {
+        if (inCheck(whiteToPlay)) {
+            System.out.println(whosTurn() + "'s king in check");
+        }
         if (isFree(pos)) {
             throw new IllegalArgumentException("No piece exists at " + pos);
         }
         return getPiece(pos).possibleMoves(pos);
+    }
+
+    private boolean inCheck(boolean whiteToPlay) {
+        Notation kingPos = kings[whiteToPlay ? 0 : 1];
+        for (Notation notation : Notation.values()) {
+            Piece piece = getPiece(notation);
+            if (piece == null || piece.getColor() == (whiteToPlay ? WHITE : BLACK)) {
+                continue;
+            }
+            if (piece.possibleMoves(notation).stream().anyMatch(m -> m.end().equals(kingPos))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -273,13 +401,13 @@ public class Board {
      *
      * @return string name of the color
      */
-    public String turn() {
+    public String whosTurn() {
         return whiteToPlay ? "White" : "Black";
     }
 
     public void aiMove() {
-        Notation[] move = ai.getBestMove(whiteToPlay);
-        movePiece(move[0], move[1]);
+        Move move = ai.getBestMove(whiteToPlay);
+        movePiece(move);
     }
 
     public int evaluate(boolean whiteToPlay) {

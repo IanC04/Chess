@@ -9,9 +9,11 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.swing.*;
 
 import logic.Board;
+import logic.Move;
 import logic.Notation;
 import logic.Piece;
 
@@ -67,7 +69,7 @@ class UIBoard extends JPanel {
 
     private Notation squareSelected;
 
-    private Set<Notation> currentGreenSquares;
+    private Set<Move> currentGreenSquares;
 
     private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
     private static final Color DARK_SQUARE = new Color(181, 136, 99);
@@ -143,32 +145,38 @@ class UIBoard extends JPanel {
                 squares[i][j].setText(Objects.requireNonNullElse(logicBoard.getPiece(i, j), "").toString());
             }
         }
-        uiStatusBar.setStatus(logicBoard.turn() + "'s turn");
+        uiStatusBar.setStatus(logicBoard.whosTurn() + "'s turn");
     }
 
     private void manageClick(Notation notation) {
         if (squareSelected == null && logicBoard.getPiece(notation) != null) {
             squareSelected = notation;
-            currentGreenSquares = logicBoard.getPossibleMoves(notation);
-            for (Notation n : currentGreenSquares) {
-                byte[] pos = n.getPosition();
+            currentGreenSquares =
+                    logicBoard.getPossibleMoves(notation);
+            for (Move m : currentGreenSquares) {
+                byte[] pos = m.end().getPosition();
                 squares[pos[0]][pos[1]].setBackground(Color.GREEN);
             }
         } else {
             if (currentGreenSquares != null) {
-                for (Notation n : currentGreenSquares) {
-                    byte[] pos = n.getPosition();
+                for (Move m : currentGreenSquares) {
+                    byte[] pos = m.end().getPosition();
                     squares[pos[0]][pos[1]].setBackground((pos[0] + pos[1]) % 2 == 0 ?
                             LIGHT_SQUARE : DARK_SQUARE);
                 }
-                if (currentGreenSquares.contains(notation)) {
-                    System.out.println("Move " + squareSelected + " to " + notation);
-                    Piece captured = logicBoard.movePiece(squareSelected, notation);
+                Move selected = currentGreenSquares.stream().filter(m -> m.end().equals(notation)).findFirst().orElse(null);
+                if (selected != null) {
+                    System.out.println("Move " + selected);
+                    try {
+                        Piece captured = logicBoard.movePiece(selected);
+                    } catch (IllegalArgumentException e) {
+                        System.err.println(e.getMessage());
+                    }
                     // logicBoard.aiMove();
                 }
             }
-            currentGreenSquares = null;
             squareSelected = null;
+            currentGreenSquares = null;
         }
 
         updateBoard();
