@@ -169,8 +169,17 @@ class UIBoard extends JPanel {
                     System.out.println("Move " + selected);
                     try {
                         Piece captured = logicBoard.movePiece(selected);
+                        boolean gameOver = logicBoard.checkMated();
+                        if (gameOver) {
+                            uiStatusBar.setStatus("Game Over");
+                            // Causes IllegalStateException for thread not owner
+                            wait(2_000);
+                            resetGame();
+                        }
                     } catch (IllegalArgumentException e) {
-                        System.err.println(e.getMessage());
+                        System.err.println("Bad argument: " + e.getMessage());
+                    } catch (InterruptedException e) {
+                        System.err.println("Interrupt: " + e.getMessage());
                     }
                     // logicBoard.aiMove();
                 }

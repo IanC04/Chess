@@ -351,7 +351,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
     private boolean canCastleLeft(Notation pos) {
         byte[] posArr = pos.getPosition();
         if (board.getPiece(posArr[0], 0) != null && board.getPiece(posArr[0], 0).T == PieceType.ROOK && board.getPiece(posArr[0], 0).mutableState.lastMove == -1) {
-            for (int i = 2; i < posArr[1]; ++i) {
+            for (int i = 2; i <= posArr[1]; ++i) {
                 if (board.getPiece(posArr[0], i) != null || dangerSquareForKing(Notation.get(posArr[0], i))) {
                     return false;
                 }
@@ -365,7 +365,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
     private boolean canCastleRight(Notation pos) {
         byte[] posArr = pos.getPosition();
         if (board.getPiece(posArr[0], 7) != null && board.getPiece(posArr[0], 7).T == PieceType.ROOK && board.getPiece(posArr[0], 7).mutableState.lastMove == -1) {
-            for (int i = posArr[1] + 1; i < 7; ++i) {
+            for (int i = posArr[1]; i < 7; ++i) {
                 if (board.getPiece(posArr[0], i) != null || dangerSquareForKing(Notation.get(posArr[0], i))) {
                     return false;
                 }
@@ -382,7 +382,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
      * @param pos position of the square to check
      * @return whether the square is safe for the king
      */
-    private boolean dangerSquareForKing(Notation pos) {
+    public boolean dangerSquareForKing(Notation pos) {
         byte[] posArr = pos.getPosition();
         boolean danger = false;
         for (int i = 0; i < 8; ++i) {

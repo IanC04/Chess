@@ -3,6 +3,7 @@ package logic;
 import ai.Minimax;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Set;
 
 import static logic.Notation.*;
@@ -31,13 +32,52 @@ public class Board {
      */
     private final Minimax ai;
 
-    // Location of the kings
-    private Notation[] kings;
+    /**
+     * Player statuses
+     */
+    private final PlayerStatus whiteStatus;
+    private final PlayerStatus blackStatus;
+
+
+    private static class PlayerStatus {
+        Notation king;
+        GameStatus gameStatus;
+        Piece.PieceColor color;
+
+        HashMap<Piece, Set<Move>> allPossibleMoves;
+
+        private enum GameStatus {
+            NORMAL, CHECK, CHECKMATE, STALEMATE
+        }
+
+        private PlayerStatus(Piece.PieceColor color) {
+            this(color, color == WHITE ? E1 : E8, GameStatus.NORMAL);
+        }
+
+        private PlayerStatus(Piece.PieceColor color, Notation king, GameStatus gameStatus) {
+            this.color = color;
+            this.king = king;
+            this.gameStatus = gameStatus;
+            this.allPossibleMoves = new HashMap<>();
+        }
+
+        public PlayerStatus copy() {
+            return new PlayerStatus(this.color, this.king, this.gameStatus);
+        }
+
+        public void reset() {
+            this.king = color == WHITE ? E1 : E8;
+            this.gameStatus = GameStatus.NORMAL;
+            this.allPossibleMoves.clear();
+        }
+    }
 
     public Board() {
         this.CHESS_BOARD = new Piece[8][8];
         this.whiteToPlay = true;
         this.ai = new Minimax(this);
+        this.whiteStatus = new PlayerStatus(WHITE);
+        this.blackStatus = new PlayerStatus(BLACK);
         resetBoard();
     }
 
@@ -54,7 +94,8 @@ public class Board {
             System.arraycopy(board.CHESS_BOARD[i], 0, this.CHESS_BOARD[i], 0, 8);
         }
         this.turn = board.turn;
-        this.kings = board.kings;
+        this.whiteStatus = board.whiteStatus.copy();
+        this.blackStatus = board.blackStatus.copy();
     }
 
     /**
@@ -113,9 +154,10 @@ public class Board {
         }
 
         // White goes first
-        whiteToPlay = true;
-        turn = 1;
-        kings = new Notation[]{E1, E8};
+        this.whiteToPlay = true;
+        this.turn = 1;
+        this.whiteStatus.reset();
+        this.blackStatus.reset();
     }
 
     /**
@@ -133,11 +175,6 @@ public class Board {
             piece.setDoubleMove();
         }
         updateBoard(oldPos, newPos);
-
-        piece.moved(turn);
-        whiteToPlay = !whiteToPlay;
-        ++turn;
-
         return captured;
     }
 
@@ -153,11 +190,6 @@ public class Board {
         updateBoard(oldPos, newPos);
         captured = getPiece(Notation.get(oldPos.getPosition()[0], newPos.getPosition()[1]));
         CHESS_BOARD[oldPos.getPosition()[0]][newPos.getPosition()[1]] = null;
-
-        piece.moved(turn);
-        whiteToPlay = !whiteToPlay;
-        ++turn;
-
         return captured;
     }
 
@@ -173,11 +205,6 @@ public class Board {
         updateBoard(oldPos, newPos);
         updateBoard(Notation.get(oldPos.getPosition()[0], (newPos.getPosition()[1] > oldPos.getPosition()[1]) ? 7 : 0),
                 Notation.get(oldPos.getPosition()[0], (newPos.getPosition()[1] > oldPos.getPosition()[1]) ? 5 : 3));
-
-        piece.moved(turn);
-        whiteToPlay = !whiteToPlay;
-        ++turn;
-
         return null;
     }
 
@@ -192,11 +219,6 @@ public class Board {
 
         piece = new Piece(piece.getColor(), promotionType, this);
         CHESS_BOARD[newPos.getPosition()[0]][newPos.getPosition()[1]] = piece;
-
-        piece.moved(turn);
-        whiteToPlay = !whiteToPlay;
-        ++turn;
-
         return captured;
     }
 
@@ -213,22 +235,33 @@ public class Board {
             throw new IllegalArgumentException("Piece color does not match turn");
         }
 
-        switch (move.moveType()) {
-            case NORMAL -> {
-                return movePieceNormal(oldPos, newPos);
-            }
-            case EN_PASSANT -> {
-                return movePieceEnPassant(oldPos, newPos);
-            }
-            case CASTLE -> {
-                return movePieceCastle(oldPos, newPos);
-            }
-            case PROMOTION -> {
-                // TODO: Add functionality for promotion
-                return movePiecePromotion(oldPos, newPos, QUEEN);
-            }
-            default -> throw new IllegalArgumentException("Promotion not implemented");
+        Piece originalPiece = getPiece(oldPos);
+        Piece captured = switch (move.moveType()) {
+            case NORMAL -> movePieceNormal(oldPos, newPos);
+            case EN_PASSANT -> movePieceEnPassant(oldPos, newPos);
+            case CASTLE -> movePieceCastle(oldPos, newPos);
+            case PROMOTION -> movePiecePromotion(oldPos, newPos, getPromotionType());
+        };
+
+        if (move.moveType() == Move.MoveType.PROMOTION) {
+            originalPiece = getPiece(newPos);
         }
+        updateStatus(originalPiece, move);
+
+        originalPiece.moved(turn);
+        whiteToPlay = !whiteToPlay;
+        ++turn;
+
+        return captured;
+    }
+
+    /**
+     * TODO: Add functionality for promotion type selection
+     *
+     * @return promotion type
+     */
+    private Piece.PieceType getPromotionType() {
+        return QUEEN;
     }
 
     private void updateBoard(Notation oldPos, Notation newPos) {
@@ -280,28 +313,145 @@ public class Board {
      * @return set of possible moves
      */
     public Set<Move> getPossibleMoves(Notation pos) {
-        if (inCheck(whiteToPlay)) {
-            System.out.println(whosTurn() + "'s king in check");
-        }
         if (isFree(pos)) {
             throw new IllegalArgumentException("No piece exists at " + pos);
         }
-        return getPiece(pos).possibleMoves(pos);
-    }
 
-    private boolean inCheck(boolean whiteToPlay) {
-        Notation kingPos = kings[whiteToPlay ? 0 : 1];
-        for (Notation notation : Notation.values()) {
-            Piece piece = getPiece(notation);
-            if (piece == null || piece.getColor() == (whiteToPlay ? WHITE : BLACK)) {
-                continue;
-            }
-            if (piece.possibleMoves(notation).stream().anyMatch(m -> m.end().equals(kingPos))) {
-                return true;
+        PlayerStatus status = getPiece(pos).getColor() == WHITE ? whiteStatus : blackStatus;
+        if (status.allPossibleMoves.isEmpty()) {
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    Notation currentPosition = Notation.get(i, j);
+                    if (!isFriendly(status.color, currentPosition)) {
+                        continue;
+                    }
+                    Piece piece = getPiece(currentPosition);
+                    Set<Move> possibleMoves = piece.possibleMoves(currentPosition);
+                    status.allPossibleMoves.put(piece, possibleMoves);
+                }
             }
         }
+        return status.allPossibleMoves.get(getPiece(pos));
+    }
 
+    private boolean inCheck(boolean white) {
+        return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.CHECK;
+    }
+
+    private boolean inCheckMate(boolean white) {
+        return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.CHECKMATE;
+    }
+
+    private boolean inStaleMate(boolean white) {
+        return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.STALEMATE;
+    }
+
+    /**
+     * Checks status of game
+     *
+     * @return TODO: return true if game is over
+     */
+    public boolean checkMated() {
+        if (inCheck(whiteToPlay)) {
+            // System.out.println(whosTurn() + "'s king in check");
+        }
+        if (inStaleMate(whiteToPlay)) {
+            // System.out.println(whosTurn() + "'s king in stalemate");
+        }
+        if (inCheckMate(whiteToPlay)) {
+            // System.out.println(whosTurn() + "'s king in checkmate");
+            return true;
+        }
         return false;
+    }
+
+    /**
+     * Updates the status of the game
+     *
+     * @param pieceMoved piece that was moved
+     * @param move       move that was made
+     */
+    private void updateStatus(Piece pieceMoved, Move move) {
+        if (pieceMoved.getType() == KING) {
+            if (whiteToPlay) {
+                whiteStatus.king = move.end();
+            } else {
+                blackStatus.king = move.end();
+            }
+        }
+        whiteStatus.allPossibleMoves.clear();
+        blackStatus.allPossibleMoves.clear();
+
+        boolean checked = checkIfInitiatedCheck(whiteToPlay, move);
+        if (checked) {
+            System.out.println(whosTurn() + " checks opponent");
+            boolean mated = checkIfInitiatedMate(whiteToPlay);
+            if (mated) {
+                System.out.println(whosTurn() + " mated opponent");
+            }
+        } else {
+            System.out.println(whosTurn() + " does not check opponent");
+            boolean stalemate = checkIfInitiatedStalemate(whiteToPlay);
+            if (stalemate) {
+                System.out.println(whosTurn() + " stalemated opponent");
+            }
+        }
+    }
+
+    /**
+     * Checks if the player is checking opponent by checking if king is on dangerous square
+     *
+     * @param white player
+     * @return true if checked
+     */
+    private boolean checkIfInitiatedCheck(boolean white, Move move) {
+        PlayerStatus opponent = white ? blackStatus : whiteStatus;
+        PlayerStatus player = white ? whiteStatus : blackStatus;
+        getPossibleMoves(move.end());
+        boolean checked =
+                player.allPossibleMoves.values().stream().anyMatch(pieces -> pieces.stream().anyMatch(m -> m.end().equals(opponent.king)));
+
+        System.out.println(checked + (white ? " white" : " black"));
+        opponent.gameStatus = (checked ? PlayerStatus.GameStatus.CHECK : PlayerStatus.GameStatus.NORMAL);
+        return checked;
+    }
+
+    /**
+     * Checks if the player is mated by checking if all possible moves result in king in check
+     * TODO: Implement
+     *
+     * @param white player
+     * @return true if mated
+     */
+    private boolean checkIfInitiatedMate(boolean white) {
+        if (!inCheck(!white)) {
+            throw new IllegalStateException("Player not in check, cannot be checkmate");
+        }
+        PlayerStatus opponent = white ? blackStatus : whiteStatus;
+        boolean mated = false;
+        if (mated) {
+            opponent.gameStatus = PlayerStatus.GameStatus.CHECKMATE;
+        }
+        return mated;
+    }
+
+    /**
+     * Checks if the player is stalemated by checking if there are no possible moves
+     * TODO: Implement
+     *
+     * @param white player
+     * @return true if stalemate
+     */
+    private boolean checkIfInitiatedStalemate(boolean white) {
+        if (inCheck(!white)) {
+            throw new IllegalStateException("Player in check, cannot be stalemate");
+        }
+        PlayerStatus opponent = white ? blackStatus : whiteStatus;
+        boolean stalemate = false;
+        if (stalemate) {
+            opponent.gameStatus = PlayerStatus.GameStatus.STALEMATE;
+        }
+        return stalemate;
     }
 
     /**
