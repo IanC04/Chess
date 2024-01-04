@@ -7,6 +7,8 @@ package ui;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.Set;
 import javax.swing.*;
@@ -71,7 +73,7 @@ class UIBoard extends JPanel {
     private Set<Move> currentGreenSquares;
 
     private static final class AIStatus {
-        boolean aiPlayer = false;
+        boolean aiPlayer = true;
         boolean aiPlayerTurn = false;
     }
 
@@ -143,7 +145,7 @@ class UIBoard extends JPanel {
 
     void toggleAI() {
         ai.aiPlayer = !ai.aiPlayer;
-        System.out.println("AI Player " + (ai.aiPlayer ? "enabled" : "disabled") + ".");
+        uiStatusBar.setStatus("AI Player " + (ai.aiPlayer ? "enabled" : "disabled") + ".");
     }
 
     /**
@@ -226,12 +228,15 @@ class UIToolBar extends JToolBar {
 
     UIBoard uiBoard;
 
+    HashMap<String, JButton> buttons;
+
     UIToolBar(UIBoard uiBoard) {
         if (uiBoard == null) {
             throw new IllegalStateException("Initialize uiBoard");
         }
 
         this.uiBoard = uiBoard;
+        this.buttons = new HashMap<>();
         setFloatable(false);
         initializeToolbar();
     }
@@ -246,7 +251,8 @@ class UIToolBar extends JToolBar {
         addSeparator();
         addButtonToToolbar(this, "Exit", e -> uiBoard.exitGame());
         addSeparator();
-        addButtonToToolbar(this, "AI", e -> uiBoard.toggleAI());
+        addButtonToToolbar(this, "AI", e -> this.toggleAI());
+        this.buttons.get("AI").setBackground(Color.GREEN);
     }
 
     private void addButtonToToolbar(final JToolBar toolBar, final String buttonText,
@@ -254,6 +260,15 @@ class UIToolBar extends JToolBar {
         final JButton button = new JButton(buttonText);
         button.addActionListener(actionListener);
         toolBar.add(button);
+        if (buttons.put(buttonText, button) != null) {
+            throw new IllegalStateException("Button already exists");
+        }
+    }
+
+    private void toggleAI() {
+        uiBoard.toggleAI();
+        JButton aiButton = this.buttons.get("AI");
+        aiButton.setBackground(aiButton.getBackground() == Color.GREEN ? Color.RED : Color.GREEN);
     }
 }
 

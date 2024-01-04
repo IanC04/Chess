@@ -237,6 +237,7 @@ public class Board {
     /**
      * Moves the piece at oldPos to newPos
      * TODO: Fix game status issues
+     *
      * @param move move made
      * @return the captured piece, if any
      * @throws IllegalArgumentException if the move is invalid
@@ -407,15 +408,12 @@ public class Board {
      */
     public int gameStatus() {
         if (inCheck(whiteToPlay)) {
-            System.out.println(whosTurn() + "'s king in check");
             return 1;
         }
         if (inStaleMate(whiteToPlay)) {
-            System.out.println(whosTurn() + "'s king in stalemate");
             return 2;
         }
         if (inCheckMate(whiteToPlay)) {
-            System.out.println(whosTurn() + "'s king in checkmate");
             return 3;
         }
         return 0;
@@ -447,20 +445,18 @@ public class Board {
         boolean checked = checkIfInitiatedCheck(whiteToPlay, move);
         if (checked) {
             opponent.gameStatus = PlayerStatus.GameStatus.CHECK;
-            System.out.println(whosTurn() + " checks opponent");
             boolean mated = checkIfInitiatedMate(whiteToPlay);
             if (mated) {
                 opponent.gameStatus = PlayerStatus.GameStatus.CHECKMATE;
-                System.out.println(whosTurn() + " mated opponent");
             }
         } else {
             boolean stalemate = checkIfInitiatedStalemate(whiteToPlay);
             if (stalemate) {
                 player.gameStatus = PlayerStatus.GameStatus.STALEMATE;
                 opponent.gameStatus = PlayerStatus.GameStatus.STALEMATE;
-                System.out.println(whosTurn() + " stalemated opponent");
             } else {
-                System.out.println(whosTurn() + " normal move");
+                player.gameStatus = PlayerStatus.GameStatus.NORMAL;
+                opponent.gameStatus = PlayerStatus.GameStatus.NORMAL;
             }
         }
     }
@@ -614,12 +610,17 @@ public class Board {
 
     public int evaluate(boolean whiteToPlay) {
         int score = 0;
+        Piece.PieceColor currentColor = whiteToPlay ? WHITE : BLACK;
         for (Notation pos : Notation.values()) {
             Piece piece = getPiece(pos);
-            if (piece == null || isEnemy(whiteToPlay ? BLACK : WHITE, pos)) {
+            if (piece == null) {
                 continue;
             }
-            score += piece.getScore(pos);
+            if (isFriendly(currentColor, pos)) {
+                score += piece.getScore(pos);
+            } else {
+                score -= piece.getScore(pos);
+            }
         }
         return score;
     }

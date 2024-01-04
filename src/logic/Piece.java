@@ -443,7 +443,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
 
     int getScore(Notation pos) {
         int positionalValue =
-                Math.abs(7 - pos.getPosition()[0]) + Math.abs(7 - pos.getPosition()[1]);
+                (int) -(Math.abs(3.5 - pos.getPosition()[0]) + Math.abs(3.5 - pos.getPosition()[1]));
         int materialValue = switch (T) {
             case PAWN -> 1;
             case HORSE -> 3;
@@ -453,13 +453,12 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
             case KING -> 100;
         };
         int gameValue = switch (board.gameStatus()) {
-            case 0 -> 0;
-            case 1 -> -1000;
-            case 2 -> 0;
+            case 0, 1 -> 0;
+            case 2 -> -200;
             case 3 -> -10000;
             default -> throw new IllegalStateException("Unexpected value: " + board.gameStatus());
         };
-        return positionalValue + materialValue + gameValue;
+        return positionalValue * materialValue + gameValue;
     }
 
     /**

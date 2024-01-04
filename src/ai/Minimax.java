@@ -15,7 +15,9 @@ public class Minimax {
 
     public Move getBestMove(boolean isWhite) {
         Board tempBoard = new Board(state);
-        return minimax(2, tempBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, isWhite);
+        Move bestMove = minimax(3, tempBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, isWhite);
+        System.out.println("Best move: " + bestMove);
+        return bestMove;
     }
 
     private Move minimax(int depth, Board board, int alpha, int beta, boolean maximizingPlayer) {
@@ -38,7 +40,6 @@ public class Minimax {
                 if (beta <= alpha) {
                     break;
                 }
-                System.out.println("Best move: " + bestMove);
             }
         } else {
             bestMove = new Move(Integer.MAX_VALUE);
@@ -54,7 +55,6 @@ public class Minimax {
                 if (beta <= alpha) {
                     break;
                 }
-                System.out.println("Best move: " + bestMove);
             }
         }
 
