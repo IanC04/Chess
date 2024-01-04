@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 import static logic.Piece.PieceColor.*;
 
-public record Piece(PieceColor C, PieceType T, Board board, MutableState mutableState) {
+public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mutablePieceState) {
     enum PieceType {
         PAWN, ROOK, HORSE, BISHOP, QUEEN, KING
     }
@@ -19,7 +19,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
     /**
      * Mutable state of the piece
      */
-    private static class MutableState {
+    private static class MutablePieceState {
 
         private int lastMove = -1;
 
@@ -38,18 +38,18 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
     }
 
     Piece(PieceColor C, PieceType T, Board board) {
-        this(C, T, board, new MutableState());
+        this(C, T, board, new MutablePieceState());
     }
 
     void moved(int turn) {
-        if (mutableState.lastMove >= turn) {
+        if (mutablePieceState.lastMove >= turn) {
             throw new IllegalStateException("Piece has already moved in the future?");
         }
-        mutableState.setLastMove(turn);
+        mutablePieceState.setLastMove(turn);
     }
 
     void setDoubleMove() {
-        mutableState.setPawnDoubleMove(true);
+        mutablePieceState.setPawnDoubleMove(true);
     }
 
     public boolean isWhite() {
@@ -106,7 +106,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
         byte[] posArr = pos.getPosition();
 
         // If pawn on starting square, can move 2 squares if not blocked
-        if (mutableState.lastMove == -1 && board.isFree(Notation.get(posArr[0] + direction,
+        if (mutablePieceState.lastMove == -1 && board.isFree(Notation.get(posArr[0] + direction,
                 posArr[1])) && board.isFree(Notation.get(posArr[0] + 2 * direction, posArr[1]))) {
             Move move = new Move(pos, Notation.get(posArr[0] + 2 * direction, posArr[1]));
             moves.add(move);
@@ -134,7 +134,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
             for (int[] i : possibleEnPassant) {
                 if (Board.inBounds(i[0], i[1]) && board.isEnemy(C, Notation.get(i[0], i[1]))) {
                     Piece piece = board.getPiece(i[0], i[1]);
-                    if (piece.T == PieceType.PAWN && piece.mutableState.lastMove == board.getTurn() - 1 && piece.mutableState.pawnDoubleMove) {
+                    if (piece.T == PieceType.PAWN && piece.mutablePieceState.lastMove == board.getTurn() - 1 && piece.mutablePieceState.pawnDoubleMove) {
                         Move move = new Move(pos, Notation.get(posArr[0] + direction, i[1]), Move.MoveType.EN_PASSANT);
                         moves.add(move);
                     }
@@ -334,7 +334,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
         }
 
         // Castling
-        if (mutableState.lastMove == -1) {
+        if (mutablePieceState.lastMove == -1) {
             if (canCastleLeft(pos)) {
                 Move move = new Move(pos, Notation.get(posArr[0], 2), Move.MoveType.CASTLE);
                 moves.add(move);
@@ -350,7 +350,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
 
     private boolean canCastleLeft(Notation pos) {
         byte[] posArr = pos.getPosition();
-        if (board.getPiece(posArr[0], 0) != null && board.getPiece(posArr[0], 0).T == PieceType.ROOK && board.getPiece(posArr[0], 0).mutableState.lastMove == -1) {
+        if (board.getPiece(posArr[0], 0) != null && board.getPiece(posArr[0], 0).T == PieceType.ROOK && board.getPiece(posArr[0], 0).mutablePieceState.lastMove == -1) {
             for (int i = 2; i <= posArr[1]; ++i) {
                 if (board.getPiece(posArr[0], i) != null || dangerSquareForKing(Notation.get(posArr[0], i))) {
                     return false;
@@ -364,7 +364,7 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
 
     private boolean canCastleRight(Notation pos) {
         byte[] posArr = pos.getPosition();
-        if (board.getPiece(posArr[0], 7) != null && board.getPiece(posArr[0], 7).T == PieceType.ROOK && board.getPiece(posArr[0], 7).mutableState.lastMove == -1) {
+        if (board.getPiece(posArr[0], 7) != null && board.getPiece(posArr[0], 7).T == PieceType.ROOK && board.getPiece(posArr[0], 7).mutablePieceState.lastMove == -1) {
             for (int i = posArr[1]; i < 7; ++i) {
                 if (board.getPiece(posArr[0], i) != null || dangerSquareForKing(Notation.get(posArr[0], i))) {
                     return false;
@@ -412,7 +412,17 @@ public record Piece(PieceColor C, PieceType T, Board board, MutableState mutable
     }
 
     int getScore(Notation pos) {
-        return Math.abs(7 - pos.getPosition()[0]) + Math.abs(7 - pos.getPosition()[1]);
+        int positionalValue =
+                Math.abs(7 - pos.getPosition()[0]) + Math.abs(7 - pos.getPosition()[1]);
+        int materialValue = switch (T) {
+            case PAWN -> 1;
+            case HORSE -> 3;
+            case BISHOP -> 3;
+            case ROOK -> 5;
+            case QUEEN -> 9;
+            case KING -> 100;
+        };
+        return positionalValue + materialValue;
     }
 
     /**

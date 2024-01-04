@@ -9,7 +9,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.swing.*;
 
 import logic.Board;
@@ -146,13 +145,19 @@ class UIBoard extends JPanel {
             }
         }
         uiStatusBar.setStatus(logicBoard.whosTurn() + "'s turn");
+
+        boolean aiPlayer = logicBoard.whosTurn().equals("Black");
+        if (aiPlayer) {
+            logicBoard.aiMove();
+            updateBoard();
+        }
     }
 
     private void manageClick(Notation notation) {
         if (squareSelected == null && logicBoard.getPiece(notation) != null) {
             squareSelected = notation;
             currentGreenSquares =
-                    logicBoard.getPossibleMoves(notation);
+                    logicBoard.getPiecePossibleMoves(notation);
             for (Move m : currentGreenSquares) {
                 byte[] pos = m.end().getPosition();
                 squares[pos[0]][pos[1]].setBackground(Color.GREEN);
@@ -169,11 +174,17 @@ class UIBoard extends JPanel {
                     System.out.println("Move " + selected);
                     try {
                         Piece captured = logicBoard.movePiece(selected);
-                        boolean gameOver = logicBoard.checkMated();
+                        boolean gameOver = switch (logicBoard.gameStatus()) {
+                            case 2, 3:
+                                yield true;
+                            default:
+                                yield false;
+                        };
+                        System.out.println("Captured: " + captured);
                         if (gameOver) {
                             uiStatusBar.setStatus("Game Over");
                             // Causes IllegalStateException for thread not owner
-                            wait(2_000);
+                            wait(1_000);
                             resetGame();
                         }
                     } catch (IllegalArgumentException e) {
@@ -181,7 +192,6 @@ class UIBoard extends JPanel {
                     } catch (InterruptedException e) {
                         System.err.println("Interrupt: " + e.getMessage());
                     }
-                    // logicBoard.aiMove();
                 }
             }
             squareSelected = null;

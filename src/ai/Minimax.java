@@ -2,8 +2,6 @@ package ai;
 
 import logic.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 public class Minimax {
@@ -16,71 +14,53 @@ public class Minimax {
     }
 
     public Move getBestMove(boolean isWhite) {
-        Move move = minimax(4, state, isWhite);
-
-        return move;
+        Board tempBoard = new Board(state);
+        return minimax(2, tempBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, isWhite);
     }
 
-    private Move minimax(int depth, Board board, boolean currentColor) {
-        Move bestMove = new Move(Integer.MIN_VALUE);
-        for (int i = 0; i < 8; ++i) {
-            for (int j = 0; j < 8; ++j) {
-                Piece source = board.getPiece(i, j);
-                if (source != null && source.isWhite() == currentColor) {
-                    Notation start = Notation.get(i, j);
-                    Set<Move> possibleMoves = board.getPossibleMoves(start);
+    private Move minimax(int depth, Board board, int alpha, int beta, boolean maximizingPlayer) {
+        if (depth == 0 || board.inStaleMate(!maximizingPlayer) || board.inCheckMate(!maximizingPlayer)) {
+            return new Move(board.evaluate(maximizingPlayer));
+        }
 
-                    for (Move move : possibleMoves) {
-                        Board tempBoard = new Board(board);
-                        tempBoard.updateBoard(move);
-
-                        int currentMoveValue = minimaxHelper(depth - 1, tempBoard,
-                                !currentColor,
-                                false);
-                        if (bestMove.value() < currentMoveValue) {
-                            bestMove = move;
-                        }
-                    }
+        Move bestMove;
+        if (maximizingPlayer) {
+            bestMove = new Move(Integer.MIN_VALUE);
+            for (Move move : board.getAllPossibleMoves()) {
+                Board tempBoard = new Board(board);
+                tempBoard.movePiece(move);
+                Move currentMove = minimax(depth - 1, tempBoard, alpha, beta,
+                        false);
+                if (currentMove.value() > bestMove.value()) {
+                    bestMove = new Move(move, currentMove.value());
                 }
+                alpha = Math.max(alpha, bestMove.value());
+                if (beta <= alpha) {
+                    break;
+                }
+                System.out.println("Best move: " + bestMove);
+            }
+        } else {
+            bestMove = new Move(Integer.MAX_VALUE);
+            for (Move move : board.getAllPossibleMoves()) {
+                Board tempBoard = new Board(board);
+                tempBoard.movePiece(move);
+                Move currentMove = minimax(depth - 1, tempBoard, alpha, beta,
+                        true);
+                if (currentMove.value() < bestMove.value()) {
+                    bestMove = new Move(move, currentMove.value());
+                }
+                alpha = Math.min(alpha, bestMove.value());
+                if (beta <= alpha) {
+                    break;
+                }
+                System.out.println("Best move: " + bestMove);
             }
         }
 
         if (bestMove.start() == null || bestMove.end() == null) {
-            throw new IllegalStateException("No move found error or stalemate");
+            throw new IllegalStateException("No move found error or stalemate: " + bestMove);
         }
-        return bestMove;
-    }
-
-    private int minimaxHelper(int depth, Board board, boolean currentColor,
-                              boolean isMaximizingPlayer) {
-        if (depth == 0) {
-            return board.evaluate(currentColor);
-        }
-        int bestMove = isMaximizingPlayer ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-        for (int i = 0; i < 8; ++i) {
-            for (int j = 0; j < 8; ++j) {
-                Piece source = board.getPiece(i, j);
-                if (source != null && source.isWhite() == currentColor) {
-                    Notation start = Notation.get(i, j);
-                    Set<Move> possibleMoves = board.getPossibleMoves(start);
-
-                    for (Move move : possibleMoves) {
-                        Board tempBoard = new Board(board);
-                        tempBoard.updateBoard(move);
-
-                        int currentMoveValue = minimaxHelper(depth - 1, tempBoard,
-                                !currentColor,
-                                !isMaximizingPlayer);
-                        if (isMaximizingPlayer) {
-                            bestMove = Math.max(bestMove, currentMoveValue);
-                        } else {
-                            bestMove = Math.min(bestMove, currentMoveValue);
-                        }
-                    }
-                }
-            }
-        }
-
         return bestMove;
     }
 }

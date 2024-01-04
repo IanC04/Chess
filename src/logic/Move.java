@@ -17,6 +17,10 @@ public record Move(Notation start, Notation end, int value, MoveType moveType) i
     public Move(Notation start, Notation end, MoveType moveType) {
         this(start, end, 0, moveType);
     }
+
+    public Move(Move move, int value) {
+        this(move.start, move.end, value, move.moveType);
+    }
     @Override
     public int compareTo(Move o) {
         return Integer.compare(value, o.value);

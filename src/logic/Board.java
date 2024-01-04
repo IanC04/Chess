@@ -4,7 +4,9 @@ import ai.Minimax;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static logic.Notation.*;
 import static logic.Piece.PieceColor.*;
@@ -91,7 +93,13 @@ public class Board {
         this.whiteToPlay = board.whiteToPlay;
         this.ai = null;
         for (int i = 0; i < 8; ++i) {
-            System.arraycopy(board.CHESS_BOARD[i], 0, this.CHESS_BOARD[i], 0, 8);
+            for (int j = 0; j < CHESS_BOARD[i].length; ++j) {
+                Piece piece = board.CHESS_BOARD[i][j];
+                if (piece == null) {
+                    continue;
+                }
+                CHESS_BOARD[i][j] = new Piece(piece.getColor(), piece.getType(), this);
+            }
         }
         this.turn = board.turn;
         this.whiteStatus = board.whiteStatus.copy();
@@ -271,7 +279,7 @@ public class Board {
         CHESS_BOARD[oldPosArr[0]][oldPosArr[1]] = null;
     }
 
-    public void updateBoard(Move move) {
+    void updateBoard(Move move) {
         updateBoard(move.start(), move.end());
     }
 
@@ -306,63 +314,97 @@ public class Board {
         return turn;
     }
 
+    public Set<Move> getAllPossibleMoves() {
+        PlayerStatus status = whiteToPlay ? whiteStatus : blackStatus;
+        if (status.allPossibleMoves.isEmpty()) {
+            generateAllPossibleMoves(status);
+        }
+
+        return status.allPossibleMoves.values().stream().flatMap(Set::stream).collect(Collectors.toSet());
+    }
+
+    private void generateAllPossibleMoves(PlayerStatus status) {
+        for (Notation currentPosition : Notation.values()) {
+            if (!isFriendly(status.color, currentPosition)) {
+                continue;
+            }
+            Piece piece = getPiece(currentPosition);
+            Set<Move> possibleMoves =
+                    piece.possibleMoves(currentPosition).stream().filter(m -> kingSafe(whiteToPlay
+                            , m)).collect(Collectors.toSet());
+            status.allPossibleMoves.put(piece, possibleMoves);
+        }
+    }
+
     /**
      * Returns all possible moves of the piece at pos
      *
      * @param pos position
      * @return set of possible moves
      */
-    public Set<Move> getPossibleMoves(Notation pos) {
+    public Set<Move> getPiecePossibleMoves(Notation pos) {
         if (isFree(pos)) {
             throw new IllegalArgumentException("No piece exists at " + pos);
         }
 
         PlayerStatus status = getPiece(pos).getColor() == WHITE ? whiteStatus : blackStatus;
         if (status.allPossibleMoves.isEmpty()) {
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < 8; j++) {
-                    Notation currentPosition = Notation.get(i, j);
-                    if (!isFriendly(status.color, currentPosition)) {
-                        continue;
-                    }
-                    Piece piece = getPiece(currentPosition);
-                    Set<Move> possibleMoves = piece.possibleMoves(currentPosition);
-                    status.allPossibleMoves.put(piece, possibleMoves);
-                }
-            }
+            generateAllPossibleMoves(status);
         }
         return status.allPossibleMoves.get(getPiece(pos));
     }
 
-    private boolean inCheck(boolean white) {
+    private boolean kingSafe(boolean white, Move move) {
+        Board tempBoard = new Board(this);
+        tempBoard.updateBoard(move);
+        for (Notation pos : Notation.values()) {
+            if (tempBoard.isEnemy(white ? WHITE : BLACK, pos)) {
+                Set<Move> possibleMoves = tempBoard.getPiece(pos).possibleMoves(pos);
+                if (possibleMoves.stream().anyMatch(m -> m.end().equals(white ? whiteStatus.king : blackStatus.king))) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns true if the player is in check
+     *
+     * @param white player
+     * @return true if in check
+     */
+    public boolean inCheck(boolean white) {
         return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.CHECK;
     }
 
-    private boolean inCheckMate(boolean white) {
+    public boolean inCheckMate(boolean white) {
         return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.CHECKMATE;
     }
 
-    private boolean inStaleMate(boolean white) {
+    public boolean inStaleMate(boolean white) {
         return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.STALEMATE;
     }
 
     /**
      * Checks status of game
      *
-     * @return TODO: return true if game is over
+     * @return TODO: implement
      */
-    public boolean checkMated() {
+    public int gameStatus() {
         if (inCheck(whiteToPlay)) {
-            // System.out.println(whosTurn() + "'s king in check");
+            System.out.println(whosTurn() + "'s king in check");
+            return 1;
         }
         if (inStaleMate(whiteToPlay)) {
-            // System.out.println(whosTurn() + "'s king in stalemate");
+            System.out.println(whosTurn() + "'s king in stalemate");
+            return 2;
         }
         if (inCheckMate(whiteToPlay)) {
-            // System.out.println(whosTurn() + "'s king in checkmate");
-            return true;
+            System.out.println(whosTurn() + "'s king in checkmate");
+            return 3;
         }
-        return false;
+        return 0;
     }
 
     /**
@@ -382,18 +424,25 @@ public class Board {
         whiteStatus.allPossibleMoves.clear();
         blackStatus.allPossibleMoves.clear();
 
+        PlayerStatus player = whiteToPlay ? whiteStatus : blackStatus;
+        PlayerStatus opponent = whiteToPlay ? blackStatus : whiteStatus;
         boolean checked = checkIfInitiatedCheck(whiteToPlay, move);
         if (checked) {
+            opponent.gameStatus = PlayerStatus.GameStatus.CHECK;
             System.out.println(whosTurn() + " checks opponent");
             boolean mated = checkIfInitiatedMate(whiteToPlay);
             if (mated) {
+                opponent.gameStatus = PlayerStatus.GameStatus.CHECKMATE;
                 System.out.println(whosTurn() + " mated opponent");
             }
         } else {
-            System.out.println(whosTurn() + " does not check opponent");
             boolean stalemate = checkIfInitiatedStalemate(whiteToPlay);
             if (stalemate) {
+                player.gameStatus = PlayerStatus.GameStatus.STALEMATE;
+                opponent.gameStatus = PlayerStatus.GameStatus.STALEMATE;
                 System.out.println(whosTurn() + " stalemated opponent");
+            } else {
+                System.out.println(whosTurn() + " normal move");
             }
         }
     }
@@ -407,12 +456,9 @@ public class Board {
     private boolean checkIfInitiatedCheck(boolean white, Move move) {
         PlayerStatus opponent = white ? blackStatus : whiteStatus;
         PlayerStatus player = white ? whiteStatus : blackStatus;
-        getPossibleMoves(move.end());
+        getPiecePossibleMoves(move.end());
         boolean checked =
                 player.allPossibleMoves.values().stream().anyMatch(pieces -> pieces.stream().anyMatch(m -> m.end().equals(opponent.king)));
-
-        System.out.println(checked + (white ? " white" : " black"));
-        opponent.gameStatus = (checked ? PlayerStatus.GameStatus.CHECK : PlayerStatus.GameStatus.NORMAL);
         return checked;
     }
 
@@ -429,9 +475,6 @@ public class Board {
         }
         PlayerStatus opponent = white ? blackStatus : whiteStatus;
         boolean mated = false;
-        if (mated) {
-            opponent.gameStatus = PlayerStatus.GameStatus.CHECKMATE;
-        }
         return mated;
     }
 
@@ -448,10 +491,15 @@ public class Board {
         }
         PlayerStatus opponent = white ? blackStatus : whiteStatus;
         boolean stalemate = false;
-        if (stalemate) {
-            opponent.gameStatus = PlayerStatus.GameStatus.STALEMATE;
-        }
         return stalemate;
+    }
+
+    public boolean movablePiece(Notation pos) {
+        Piece piece = getPiece(pos);
+        if (piece == null) {
+            throw new IllegalArgumentException("No piece exists at " + pos);
+        }
+        return piece.getColor() == (whiteToPlay ? WHITE : BLACK);
     }
 
     /**
@@ -562,12 +610,12 @@ public class Board {
 
     public int evaluate(boolean whiteToPlay) {
         int score = 0;
-        for (Notation notation : Notation.values()) {
-            Piece piece = getPiece(notation);
-            if (piece == null || isEnemy(whiteToPlay ? BLACK : WHITE, notation)) {
+        for (Notation pos : Notation.values()) {
+            Piece piece = getPiece(pos);
+            if (piece == null || isEnemy(whiteToPlay ? BLACK : WHITE, pos)) {
                 continue;
             }
-            score += piece.getScore(notation);
+            score += piece.getScore(pos);
         }
         return score;
     }
