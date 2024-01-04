@@ -21,9 +21,22 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
      */
     private static class MutablePieceState {
 
-        private int lastMove = -1;
+        private int lastMove;
 
-        private boolean pawnDoubleMove = false;
+        private boolean pawnDoubleMove;
+
+        MutablePieceState() {
+            this(-1, false);
+        }
+
+        MutablePieceState(int lastMove, boolean pawnDoubleMove) {
+            this.lastMove = lastMove;
+            this.pawnDoubleMove = pawnDoubleMove;
+        }
+
+        MutablePieceState copy() {
+            return new MutablePieceState(lastMove, pawnDoubleMove);
+        }
 
         public void setLastMove(int turn) {
             this.lastMove = turn;
@@ -39,6 +52,10 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
 
     Piece(PieceColor C, PieceType T, Board board) {
         this(C, T, board, new MutablePieceState());
+    }
+
+    Piece copy(Board newBoard) {
+        return new Piece(C, T, newBoard, this.mutablePieceState.copy());
     }
 
     void moved(int turn) {
@@ -335,11 +352,13 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
 
         // Castling
         if (mutablePieceState.lastMove == -1) {
-            if (canCastleLeft(pos)) {
+            boolean canCastleLeft = canCastleLeft(pos);
+            boolean canCastleRight = canCastleRight(pos);
+            if (canCastleLeft) {
                 Move move = new Move(pos, Notation.get(posArr[0], 2), Move.MoveType.CASTLE);
                 moves.add(move);
             }
-            if (canCastleRight(pos)) {
+            if (canCastleRight) {
                 Move move = new Move(pos, Notation.get(posArr[0], 6), Move.MoveType.CASTLE);
                 moves.add(move);
             }
@@ -351,8 +370,11 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
     private boolean canCastleLeft(Notation pos) {
         byte[] posArr = pos.getPosition();
         if (board.getPiece(posArr[0], 0) != null && board.getPiece(posArr[0], 0).T == PieceType.ROOK && board.getPiece(posArr[0], 0).mutablePieceState.lastMove == -1) {
-            for (int i = 2; i <= posArr[1]; ++i) {
-                if (board.getPiece(posArr[0], i) != null || dangerSquareForKing(Notation.get(posArr[0], i))) {
+            if (board().inCheck(C == WHITE)) {
+                return false;
+            }
+            for (int j = 2; j < posArr[1]; ++j) {
+                if (board.getPiece(posArr[0], j) != null || dangerSquareForKing(Notation.get(posArr[0], j))) {
                     return false;
                 }
             }
@@ -365,8 +387,11 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
     private boolean canCastleRight(Notation pos) {
         byte[] posArr = pos.getPosition();
         if (board.getPiece(posArr[0], 7) != null && board.getPiece(posArr[0], 7).T == PieceType.ROOK && board.getPiece(posArr[0], 7).mutablePieceState.lastMove == -1) {
-            for (int i = posArr[1]; i < 7; ++i) {
-                if (board.getPiece(posArr[0], i) != null || dangerSquareForKing(Notation.get(posArr[0], i))) {
+            if (board().inCheck(C == WHITE)) {
+                return false;
+            }
+            for (int j = posArr[1] + 1; j < 7; ++j) {
+                if (board.getPiece(posArr[0], j) != null || dangerSquareForKing(Notation.get(posArr[0], j))) {
                     return false;
                 }
             }
@@ -382,33 +407,38 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
      * @param pos position of the square to check
      * @return whether the square is safe for the king
      */
-    public boolean dangerSquareForKing(Notation pos) {
+    private boolean dangerSquareForKing(Notation pos) {
         byte[] posArr = pos.getPosition();
         boolean danger = false;
-        for (int i = 0; i < 8; ++i) {
-            for (int j = 0; j < 8; ++j) {
-                if (board.isEnemy(C, Notation.get(i, j))) {
-                    Piece piece = board.getPiece(i, j);
-                    danger = switch (piece.getType()) {
-                        case PAWN -> {
-                            int direction = piece.getColor() == WHITE ? 1 : -1;
-                            if (posArr[0] == i + direction && Math.abs(posArr[1] - j) == 1) {
-                                System.out.println(piece);
-                                yield true;
-                            }
-                            yield false;
-                        }
-                        case KING -> Math.abs(posArr[0] - i) <= 1 && Math.abs(posArr[1] - j) <= 1;
-                        default -> board.getPiece(i, j).possibleMoves(Notation.get(i, j)).
-                                stream().map(Move::end).collect(Collectors.toSet()).contains(pos);
-                    };
-                    if (danger) {
-                        return true;
+        for (Notation enemyPos : Notation.values()) {
+            if (board.isEnemy(C, enemyPos)) {
+                Piece piece = board.getPiece(enemyPos);
+                byte[] enemyPosArr = enemyPos.getPosition();
+                danger = switch (piece.getType()) {
+                    case PAWN -> {
+                        int direction = piece.getColor() == WHITE ? 1 : -1;
+                        boolean pawnDanger =
+                                posArr[0] == enemyPosArr[0] + direction && Math.abs(posArr[1] - enemyPosArr[1]) == 1;
+                        yield pawnDanger;
                     }
+                    case KING -> {
+                        boolean kingDanger =
+                                Math.abs(posArr[0] - enemyPosArr[0]) <= 1 && Math.abs(posArr[1] - enemyPosArr[1]) <= 1;
+                        yield kingDanger;
+                    }
+                    default -> {
+                        boolean otherDanger = piece.possibleMoves(enemyPos).
+                                stream().map(Move::end).collect(Collectors.toSet()).contains(pos);
+                        yield otherDanger;
+                    }
+                };
+                if (danger) {
+                    return true;
                 }
             }
+
         }
-        return danger;
+        return false;
     }
 
     int getScore(Notation pos) {
@@ -422,7 +452,14 @@ public record Piece(PieceColor C, PieceType T, Board board, MutablePieceState mu
             case QUEEN -> 9;
             case KING -> 100;
         };
-        return positionalValue + materialValue;
+        int gameValue = switch (board.gameStatus()) {
+            case 0 -> 0;
+            case 1 -> -1000;
+            case 2 -> 0;
+            case 3 -> -10000;
+            default -> throw new IllegalStateException("Unexpected value: " + board.gameStatus());
+        };
+        return positionalValue + materialValue + gameValue;
     }
 
     /**

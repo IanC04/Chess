@@ -98,12 +98,14 @@ public class Board {
                 if (piece == null) {
                     continue;
                 }
-                CHESS_BOARD[i][j] = new Piece(piece.getColor(), piece.getType(), this);
+                CHESS_BOARD[i][j] = piece.copy(this);
             }
         }
         this.turn = board.turn;
         this.whiteStatus = board.whiteStatus.copy();
         this.blackStatus = board.blackStatus.copy();
+        this.whiteStatus.allPossibleMoves = new HashMap<>(board.whiteStatus.allPossibleMoves);
+        this.blackStatus.allPossibleMoves = new HashMap<>(board.blackStatus.allPossibleMoves);
     }
 
     /**
@@ -166,6 +168,8 @@ public class Board {
         this.turn = 1;
         this.whiteStatus.reset();
         this.blackStatus.reset();
+        this.generateAllPossibleMoves(whiteStatus);
+        this.generateAllPossibleMoves(blackStatus);
     }
 
     /**
@@ -230,6 +234,13 @@ public class Board {
         return captured;
     }
 
+    /**
+     * Moves the piece at oldPos to newPos
+     * TODO: Fix game status issues
+     * @param move move made
+     * @return the captured piece, if any
+     * @throws IllegalArgumentException if the move is invalid
+     */
     public Piece movePiece(Move move) throws IllegalArgumentException {
         Notation oldPos = move.start();
         Notation newPos = move.end();
@@ -317,7 +328,7 @@ public class Board {
     public Set<Move> getAllPossibleMoves() {
         PlayerStatus status = whiteToPlay ? whiteStatus : blackStatus;
         if (status.allPossibleMoves.isEmpty()) {
-            generateAllPossibleMoves(status);
+            throw new IllegalStateException("No possible moves generated");
         }
 
         return status.allPossibleMoves.values().stream().flatMap(Set::stream).collect(Collectors.toSet());
@@ -330,7 +341,7 @@ public class Board {
             }
             Piece piece = getPiece(currentPosition);
             Set<Move> possibleMoves =
-                    piece.possibleMoves(currentPosition).stream().filter(m -> kingSafe(whiteToPlay
+                    piece.possibleMoves(currentPosition).stream().filter(m -> kingSafe(!whiteToPlay
                             , m)).collect(Collectors.toSet());
             status.allPossibleMoves.put(piece, possibleMoves);
         }
@@ -349,7 +360,7 @@ public class Board {
 
         PlayerStatus status = getPiece(pos).getColor() == WHITE ? whiteStatus : blackStatus;
         if (status.allPossibleMoves.isEmpty()) {
-            generateAllPossibleMoves(status);
+            throw new IllegalStateException("No possible moves generated");
         }
         return status.allPossibleMoves.get(getPiece(pos));
     }
@@ -359,6 +370,9 @@ public class Board {
         tempBoard.updateBoard(move);
         for (Notation pos : Notation.values()) {
             if (tempBoard.isEnemy(white ? WHITE : BLACK, pos)) {
+                if (tempBoard.getPiece(pos).getType() == KING) {
+                    continue;
+                }
                 Set<Move> possibleMoves = tempBoard.getPiece(pos).possibleMoves(pos);
                 if (possibleMoves.stream().anyMatch(m -> m.end().equals(white ? whiteStatus.king : blackStatus.king))) {
                     return false;
@@ -387,9 +401,9 @@ public class Board {
     }
 
     /**
-     * Checks status of game
+     * Checks status of game with respect to the current player
      *
-     * @return TODO: implement
+     * @return 0 if normal, 1 if check, 2 if stalemate, 3 if checkmate
      */
     public int gameStatus() {
         if (inCheck(whiteToPlay)) {
@@ -421,8 +435,12 @@ public class Board {
                 blackStatus.king = move.end();
             }
         }
+
+        // Refresh move sets
         whiteStatus.allPossibleMoves.clear();
         blackStatus.allPossibleMoves.clear();
+        generateAllPossibleMoves(whiteStatus);
+        generateAllPossibleMoves(blackStatus);
 
         PlayerStatus player = whiteToPlay ? whiteStatus : blackStatus;
         PlayerStatus opponent = whiteToPlay ? blackStatus : whiteStatus;
@@ -457,14 +475,11 @@ public class Board {
         PlayerStatus opponent = white ? blackStatus : whiteStatus;
         PlayerStatus player = white ? whiteStatus : blackStatus;
         getPiecePossibleMoves(move.end());
-        boolean checked =
-                player.allPossibleMoves.values().stream().anyMatch(pieces -> pieces.stream().anyMatch(m -> m.end().equals(opponent.king)));
-        return checked;
+        return player.allPossibleMoves.values().stream().anyMatch(pieces -> pieces.stream().anyMatch(m -> m.end().equals(opponent.king)));
     }
 
     /**
      * Checks if the player is mated by checking if all possible moves result in king in check
-     * TODO: Implement
      *
      * @param white player
      * @return true if mated
@@ -474,13 +489,11 @@ public class Board {
             throw new IllegalStateException("Player not in check, cannot be checkmate");
         }
         PlayerStatus opponent = white ? blackStatus : whiteStatus;
-        boolean mated = false;
-        return mated;
+        return opponent.allPossibleMoves.values().stream().allMatch(Set::isEmpty);
     }
 
     /**
      * Checks if the player is stalemated by checking if there are no possible moves
-     * TODO: Implement
      *
      * @param white player
      * @return true if stalemate
@@ -490,16 +503,7 @@ public class Board {
             throw new IllegalStateException("Player in check, cannot be stalemate");
         }
         PlayerStatus opponent = white ? blackStatus : whiteStatus;
-        boolean stalemate = false;
-        return stalemate;
-    }
-
-    public boolean movablePiece(Notation pos) {
-        Piece piece = getPiece(pos);
-        if (piece == null) {
-            throw new IllegalArgumentException("No piece exists at " + pos);
-        }
-        return piece.getColor() == (whiteToPlay ? WHITE : BLACK);
+        return opponent.allPossibleMoves.values().stream().allMatch(Set::isEmpty);
     }
 
     /**

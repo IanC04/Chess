@@ -70,6 +70,13 @@ class UIBoard extends JPanel {
 
     private Set<Move> currentGreenSquares;
 
+    private static final class AIStatus {
+        boolean aiPlayer = false;
+        boolean aiPlayerTurn = false;
+    }
+
+    private final AIStatus ai = new AIStatus();
+
     private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
     private static final Color DARK_SQUARE = new Color(181, 136, 99);
 
@@ -134,6 +141,11 @@ class UIBoard extends JPanel {
         System.exit(0);
     }
 
+    void toggleAI() {
+        ai.aiPlayer = !ai.aiPlayer;
+        System.out.println("AI Player " + (ai.aiPlayer ? "enabled" : "disabled") + ".");
+    }
+
     /**
      * Updates the graphical board
      */
@@ -146,9 +158,9 @@ class UIBoard extends JPanel {
         }
         uiStatusBar.setStatus(logicBoard.whosTurn() + "'s turn");
 
-        boolean aiPlayer = logicBoard.whosTurn().equals("Black");
-        if (aiPlayer) {
+        if (ai.aiPlayer && ai.aiPlayerTurn) {
             logicBoard.aiMove();
+            ai.aiPlayerTurn = false;
             updateBoard();
         }
     }
@@ -174,6 +186,9 @@ class UIBoard extends JPanel {
                     System.out.println("Move " + selected);
                     try {
                         Piece captured = logicBoard.movePiece(selected);
+                        if (ai.aiPlayer) {
+                            ai.aiPlayerTurn = true;
+                        }
                         boolean gameOver = switch (logicBoard.gameStatus()) {
                             case 2, 3:
                                 yield true;
@@ -230,6 +245,8 @@ class UIToolBar extends JToolBar {
         addButtonToToolbar(this, "Draw", e -> uiBoard.drawGame());
         addSeparator();
         addButtonToToolbar(this, "Exit", e -> uiBoard.exitGame());
+        addSeparator();
+        addButtonToToolbar(this, "AI", e -> uiBoard.toggleAI());
     }
 
     private void addButtonToToolbar(final JToolBar toolBar, final String buttonText,
