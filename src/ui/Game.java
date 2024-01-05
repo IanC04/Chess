@@ -7,7 +7,6 @@ package ui;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.Set;
@@ -54,6 +53,12 @@ public class Game extends JFrame {
         setLocationByPlatform(true);
         setLocationRelativeTo(null);
         setVisible(true);
+
+        java.io.File icon = new java.io.File("src/ui/icon.png");
+        if (icon.isFile()) {
+            ImageIcon imageIcon = new ImageIcon(icon.getAbsolutePath());
+            setIconImage(imageIcon.getImage());
+        }
     }
 
     public static void main(String[] args) {
