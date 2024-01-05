@@ -14,6 +14,8 @@ public enum Notation {
     private final byte row;
     private final byte col;
 
+    static final Notation[] ALL_VALUES = Notation.values();
+
     Notation(int r, int c) {
         this.row = (byte) r;
         this.col = (byte) c;
@@ -27,10 +29,6 @@ public enum Notation {
         if (r < 0 || r > 7 || c < 0 || c > 7) {
             throw new IllegalArgumentException("Position must be between [0, 0] x [7, 7]");
         }
-        return Notation.get(String.format("%c%c", (char) (c + 65), (char) (r + 49)));
-    }
-
-    public static Notation get(String name) {
-        return Notation.valueOf(name);
+        return Notation.ALL_VALUES[r * 8 + c];
     }
 }
