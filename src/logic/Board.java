@@ -591,6 +591,29 @@ public class Board {
         return bitBoard;
     }
 
+    /**
+     * Returns the FEN string representing the position of the current board
+     * TODO: Fix
+     * @return FEN string
+     */
+    public String getFENBoard() {
+        StringBuilder fen = new StringBuilder();
+        int emptyLength = 0;
+        for(Notation notation : ALL_VALUES) {
+            Piece piece = getPiece(notation);
+            if (piece == null) {
+                ++emptyLength;
+            } else {
+                if (emptyLength > 0) {
+                    fen.append(emptyLength);
+                    emptyLength = 0;
+                }
+                fen.append(piece);
+            }
+        }
+        return fen.toString();
+    }
+
     public void aiMove() {
         Move move = ai.getBestMove(whiteToPlay);
         movePiece(move);
