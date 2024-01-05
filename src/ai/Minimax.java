@@ -2,17 +2,20 @@ package ai;
 
 import logic.*;
 
+/**
+ * Minimax wrapper class
+ */
 public class Minimax {
 
     // Game state to evaluate
-    private final Board state;
+    private final Board STATE;
 
     public Minimax(Board state) {
-        this.state = state;
+        this.STATE = state;
     }
 
     public Move getBestMove(boolean isWhite) {
-        Board tempBoard = new Board(state);
+        Board tempBoard = new Board(STATE);
         Move bestMove = minimax(3, tempBoard, Integer.MIN_VALUE, Integer.MAX_VALUE, isWhite);
         System.out.println("Best move: " + bestMove);
         return bestMove;

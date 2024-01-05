@@ -105,7 +105,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         byte[] posArr = pos.getPosition();
 
         // Move single forward
-        if (Board.inBounds(posArr[0] + direction, posArr[1])) {
+        if (Board.inBounds(posArr[0] + direction, posArr[1]) && board.isFree(Notation.get(posArr[0] + direction, posArr[1]))) {
             Move move = new Move(pos, Notation.get(posArr[0] + direction, posArr[1]),
                     (posArr[0] + direction == 0 || posArr[0] + direction == 7) ? Move.MoveType.PROMOTION : Move.MoveType.NORMAL);
             moves.add(move);
@@ -152,7 +152,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
             int newColumn = posArr[1] - 1;
             if (newColumn >= 0 && board.isEnemy(piece.C, Notation.get(posArr[0], newColumn))) {
                 Piece enemyPiece = board.getPiece(posArr[0], newColumn);
-                // TODO: Fix this
+                // TODO: Fix en passant
                 boolean canEnPassant =
                         enemyPiece.T == PieceType.PAWN && enemyPiece.state.turns.size() == 1 && enemyPiece.state.turns.get(0) == board.getTurn() - 1;
                 if (canEnPassant) {
@@ -165,7 +165,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
             newColumn = posArr[1] + 1;
             if (newColumn < 8 && board.isEnemy(piece.C, Notation.get(posArr[0], newColumn))) {
                 Piece enemyPiece = board.getPiece(posArr[0], newColumn);
-                // TODO: Fix this
+                // TODO: Fix en passant
                 boolean canEnPassant =
                         enemyPiece.T == PieceType.PAWN && enemyPiece.state.turns.size() == 1 && enemyPiece.state.turns.get(0) == board.getTurn() - 1;
                 if (canEnPassant) {

@@ -326,6 +326,11 @@ public class Board {
         return turn;
     }
 
+    /**
+     * Returns all possible moves of the current player
+     *
+     * @return set of possible moves
+     */
     public Set<Move> getAllPossibleMoves() {
         PlayerStatus status = whiteToPlay ? whiteStatus : blackStatus;
         if (status.allPossibleMoves.isEmpty()) {
@@ -333,19 +338,6 @@ public class Board {
         }
 
         return status.allPossibleMoves.values().stream().flatMap(Set::stream).collect(Collectors.toSet());
-    }
-
-    private void generateAllPossibleMoves(PlayerStatus status) {
-        for (Notation currentPosition : Notation.ALL_VALUES) {
-            if (!isFriendly(status.color, currentPosition)) {
-                continue;
-            }
-            Piece piece = getPiece(currentPosition);
-            Set<Move> possibleMoves =
-                    piece.possibleMoves(currentPosition).stream().filter(m -> kingSafe(!whiteToPlay
-                            , m)).collect(Collectors.toSet());
-            status.allPossibleMoves.put(piece, possibleMoves);
-        }
     }
 
     /**
@@ -366,20 +358,43 @@ public class Board {
         return status.allPossibleMoves.get(getPiece(pos));
     }
 
-    private boolean kingSafe(boolean white, Move move) {
-        Board tempBoard = new Board(this);
-        tempBoard.updateBoard(move);
-        for (Notation pos : Notation.ALL_VALUES) {
-            if (tempBoard.isEnemy(white ? WHITE : BLACK, pos)) {
-                if (tempBoard.getPiece(pos).getType() == KING) {
-                    continue;
-                }
-                Set<Move> possibleMoves = tempBoard.getPiece(pos).possibleMoves(pos);
-                if (possibleMoves.stream().anyMatch(m -> m.end().equals(white ? whiteStatus.king : blackStatus.king))) {
-                    return false;
-                }
+    private void generateAllPossibleMoves(PlayerStatus status) {
+        for (Notation currentPosition : Notation.ALL_VALUES) {
+            if (!isFriendly(status.color, currentPosition)) {
+                continue;
             }
+            Piece piece = getPiece(currentPosition);
+            Set<Move> possibleMoves =
+                    piece.possibleMoves(currentPosition).stream().filter(m -> kingSafe(whiteToPlay
+                            , m)).collect(Collectors.toSet());
+            status.allPossibleMoves.put(piece, possibleMoves);
         }
+    }
+
+    /**
+     * Returns true if the king is safe after the given move
+     *
+     * @param white player
+     * @param move move made
+     * @return true if king is safe
+     */
+    private boolean kingSafe(boolean white, Move move) {
+        // Board tempBoard = new Board(this);
+        // tempBoard.updateBoard(move);
+        //
+        // Piece.PieceColor color = white ? WHITE : BLACK;
+        // PlayerStatus player = white ? whiteStatus : blackStatus;
+        // for (Notation pos : Notation.ALL_VALUES) {
+        //     if (tempBoard.isEnemy(color, pos)) {
+        //         if (tempBoard.getPiece(pos).getType() == KING) {
+        //             continue;
+        //         }
+        //         Set<Move> possibleMoves = tempBoard.getPiece(pos).possibleMoves(pos);
+        //         if (possibleMoves.stream().anyMatch(m -> m.end().equals(player.king))) {
+        //             return false;
+        //         }
+        //     }
+        // }
         return true;
     }
 
