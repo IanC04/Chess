@@ -2,8 +2,6 @@ package ai;
 
 import logic.*;
 
-import java.util.Set;
-
 public class Minimax {
 
     // Game state to evaluate

@@ -43,7 +43,7 @@ public class Board {
     private static class PlayerStatus {
         Notation king;
         GameStatus gameStatus;
-        Piece.PieceColor color;
+        final Piece.PieceColor color;
 
         HashMap<Piece, Set<Move>> allPossibleMoves;
 
@@ -181,6 +181,9 @@ public class Board {
      */
     private Piece movePieceNormal(Notation oldPos, Notation newPos) {
         Piece piece = getPiece(oldPos);
+        if (piece == null) {
+            throw new IllegalArgumentException("No piece exists at " + oldPos);
+        }
         Piece captured = getPiece(newPos);
 
         updateBoard(oldPos, newPos);
@@ -399,21 +402,13 @@ public class Board {
     }
 
     /**
-     * Checks status of game with respect to the current player
+     * Checks status of the game with respect to the current player
      *
-     * @return 0 if normal, 1 if check, 2 if stalemate, 3 if checkmate
+     * @return Zero if normal, One if checked, Two if stalemated, Three if checkmated
      */
     public int gameStatus() {
-        if (inCheck(whiteToPlay)) {
-            return 1;
-        }
-        if (inStaleMate(whiteToPlay)) {
-            return 2;
-        }
-        if (inCheckMate(whiteToPlay)) {
-            return 3;
-        }
-        return 0;
+        PlayerStatus player = whiteToPlay ? whiteStatus : blackStatus;
+        return player.gameStatus.ordinal();
     }
 
     /**
@@ -543,16 +538,6 @@ public class Board {
     /**
      * Returns true if the given position is in bounds
      *
-     * @param pos Flattened representation of position
-     * @return true if in bounds
-     */
-    public static boolean inBounds(int pos) {
-        return pos >= 0 && pos < 64;
-    }
-
-    /**
-     * Returns true if the given position is in bounds
-     *
      * @param pos position
      * @return true if in bounds
      */
@@ -589,15 +574,6 @@ public class Board {
             }
         }
         return bitBoard;
-    }
-
-    /**
-     * Returns the color of the player whose turn it is
-     *
-     * @return string name of the color
-     */
-    public String whosTurn() {
-        return whiteToPlay ? "White" : "Black";
     }
 
     public void aiMove() {

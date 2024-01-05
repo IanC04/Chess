@@ -163,7 +163,7 @@ class UIBoard extends JPanel {
                 squares[i][j].setText(Objects.requireNonNullElse(logicBoard.getPiece(i, j), "").toString());
             }
         }
-        uiStatusBar.setStatus(logicBoard.whosTurn() + "'s turn");
+        uiStatusBar.setStatus((logicBoard.getTurn() % 2 == 1 ? "White" : "Black") + "'s turn");
 
         if (ai.aiPlayer && ai.aiPlayerTurn) {
             logicBoard.aiMove();

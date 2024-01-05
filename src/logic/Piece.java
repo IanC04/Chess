@@ -489,7 +489,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
     /**
      * Returns the piece represented by the bit representation
      *
-     * @param bitRepresentation bit representation specified in Piece class
+     * @param bitRepresentation the bit representation specified in Piece class
      * @return unicode character
      */
     public static char getPiece(int bitRepresentation) {
