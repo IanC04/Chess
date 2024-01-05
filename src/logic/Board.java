@@ -4,7 +4,6 @@ import ai.Minimax;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -126,7 +125,7 @@ public class Board {
         pos = A1.getPosition();
         CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, this);
         pos = B1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, KNIGHT, this);
         pos = C1.getPosition();
         CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, this);
         pos = D1.getPosition();
@@ -136,7 +135,7 @@ public class Board {
         pos = F1.getPosition();
         CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, BISHOP, this);
         pos = G1.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, HORSE, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, KNIGHT, this);
         pos = H1.getPosition();
         CHESS_BOARD[pos[0]][pos[1]] = new Piece(WHITE, ROOK, this);
 
@@ -144,7 +143,7 @@ public class Board {
         pos = A8.getPosition();
         CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, this);
         pos = B8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, KNIGHT, this);
         pos = C8.getPosition();
         CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, this);
         pos = D8.getPosition();
@@ -154,7 +153,7 @@ public class Board {
         pos = F8.getPosition();
         CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, BISHOP, this);
         pos = G8.getPosition();
-        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, HORSE, this);
+        CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, KNIGHT, this);
         pos = H8.getPosition();
         CHESS_BOARD[pos[0]][pos[1]] = new Piece(BLACK, ROOK, this);
 
@@ -183,9 +182,7 @@ public class Board {
     private Piece movePieceNormal(Notation oldPos, Notation newPos) {
         Piece piece = getPiece(oldPos);
         Piece captured = getPiece(newPos);
-        if (piece.getType() == PAWN && Math.abs(oldPos.getPosition()[0] - newPos.getPosition()[0]) == 2) {
-            piece.setDoubleMove();
-        }
+
         updateBoard(oldPos, newPos);
         return captured;
     }
@@ -336,7 +333,7 @@ public class Board {
     }
 
     private void generateAllPossibleMoves(PlayerStatus status) {
-        for (Notation currentPosition : Notation.values()) {
+        for (Notation currentPosition : Notation.ALL_VALUES) {
             if (!isFriendly(status.color, currentPosition)) {
                 continue;
             }
@@ -369,7 +366,7 @@ public class Board {
     private boolean kingSafe(boolean white, Move move) {
         Board tempBoard = new Board(this);
         tempBoard.updateBoard(move);
-        for (Notation pos : Notation.values()) {
+        for (Notation pos : Notation.ALL_VALUES) {
             if (tempBoard.isEnemy(white ? WHITE : BLACK, pos)) {
                 if (tempBoard.getPiece(pos).getType() == KING) {
                     continue;
@@ -611,7 +608,7 @@ public class Board {
     public int evaluate(boolean whiteToPlay) {
         int score = 0;
         Piece.PieceColor currentColor = whiteToPlay ? WHITE : BLACK;
-        for (Notation pos : Notation.values()) {
+        for (Notation pos : Notation.ALL_VALUES) {
             Piece piece = getPiece(pos);
             if (piece == null) {
                 continue;
