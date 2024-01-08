@@ -14,30 +14,17 @@ import static logic.Piece.PieceType.*;
 public class Board {
     // Singleton
     private static boolean INITIALIZED = false;
-
-    /**
-     * Piece array to support algebraic notation indexing
-     */
+    // Piece array to support algebraic notation indexing
     private final Piece[][] CHESS_BOARD;
-
-    /**
-     * true if white's turn, false if black's
-     */
+    // true if white's turn, false if black's
     public Piece.PieceColor currentPlayerColor;
-
-    /**
-     * The current game turn
-     */
+    // The current game turn
     private int turn;
-
-    /**
-     * AI minimax algorithm
-     */
+    // How many moves both players have made since the last pawn advance or piece capture
+    private int lastHalfMove;
+    // AI minimax algorithm
     private final Minimax ai;
-
-    /**
-     * Player statuses
-     */
+    // Player statuses
     private final PlayerStatus whiteStatus;
     private final PlayerStatus blackStatus;
 
@@ -83,7 +70,7 @@ public class Board {
         Board.INITIALIZED = true;
 
         this.CHESS_BOARD = new Piece[8][8];
-        this.ai = new Minimax(this);
+        this.ai = new Minimax();
         this.whiteStatus = new PlayerStatus(WHITE);
         this.blackStatus = new PlayerStatus(BLACK);
         resetBoard();
@@ -147,6 +134,8 @@ public class Board {
         // White goes first
         this.currentPlayerColor = WHITE;
         this.turn = 1;
+        // TODO: Unsure if 1 or 0
+        this.lastHalfMove = 1;
         this.whiteStatus.reset();
         this.blackStatus.reset();
         generateAllLegalMoves(this.whiteStatus);
@@ -198,7 +187,7 @@ public class Board {
         updateBoard(oldPos, newPos);
         updateBoard(Notation.get(oldPos.getPosition()[0], (newPos.getPosition()[1] > oldPos.getPosition()[1]) ? 7 : 0),
                 Notation.get(oldPos.getPosition()[0], (newPos.getPosition()[1] > oldPos.getPosition()[1]) ? 5 : 3));
-        return captured;
+        return null;
     }
 
     private Piece movePiecePromotion(Notation oldPos, Notation newPos,
@@ -210,7 +199,7 @@ public class Board {
         Piece captured = getPiece(newPos);
         updateBoard(oldPos, newPos);
 
-        piece = new Piece(piece.getColor(), promotionType, this);
+        piece = piece.promote(promotionType);
         CHESS_BOARD[newPos.getPosition()[0]][newPos.getPosition()[1]] = piece;
         return captured;
     }
@@ -236,12 +225,21 @@ public class Board {
         }
 
         Piece originalPiece = getPiece(oldPos);
+        if (originalPiece.T() == PAWN) {
+            lastHalfMove = turn;
+        }
         Piece captured = switch (move.moveType()) {
             case NORMAL -> movePieceNormal(oldPos, newPos);
             case EN_PASSANT -> movePieceEnPassant(oldPos, newPos);
             case CASTLE -> movePieceCastle(oldPos, newPos);
             case PROMOTION -> movePiecePromotion(oldPos, newPos, move.promoteTo());
         };
+        if (captured != null) {
+            if (captured.C() != Piece.PieceColor.opposite(currentPlayerColor)) {
+                throw new IllegalStateException("Capturing our piece");
+            }
+            lastHalfMove = turn;
+        }
 
         if (move.moveType() == Move.MoveType.PROMOTION) {
             originalPiece = getPiece(newPos);
@@ -296,6 +294,14 @@ public class Board {
      */
     public Piece getPiece(int row, int col) {
         return CHESS_BOARD[row][col];
+    }
+
+    /**
+     * @param color king's color
+     * @return position of the color's king
+     */
+    public Notation getKing(Piece.PieceColor color) {
+        return color == WHITE ? whiteStatus.king : blackStatus.king;
     }
 
     /**
@@ -578,32 +584,16 @@ public class Board {
             fen.append(" -");
         }
         // Half-move clock
-        int lastHalfMove = getLatestHalfMove();
-        fen.append(' ').append(lastHalfMove == -1 ? 0 : turn - lastHalfMove);
+        fen.append(' ').append(turn - lastHalfMove);
         // Full-move number
+        // TODO: Check if correct
         fen.append(' ').append(turn / 2);
         return fen.toString();
     }
 
-    private int getLatestHalfMove() {
-        int lastHalfMove = -1;
-        for (Notation pos : Notation.ALL_VALUES) {
-            Piece piece = getPiece(pos);
-            if (piece == null) {
-                continue;
-            }
-            if (piece.getType() == PAWN) {
-                lastHalfMove = Math.max(lastHalfMove, piece.lastMoved());
-            } else {
-                // TODO: Check for capture move type
-                lastHalfMove = Math.max(lastHalfMove, piece.lastMoved());
-            }
-        }
-        return lastHalfMove;
-    }
-
     public void aiMove() {
         String FEN = getFEN();
+        System.out.println(FEN);
         if (FEN.isBlank()) {
             throw new IllegalStateException("Invalid FEN");
         }

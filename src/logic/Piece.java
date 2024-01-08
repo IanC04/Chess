@@ -28,6 +28,17 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
             this.turns = new ArrayList<>();
         }
 
+        State(List<Integer> turns) {
+            // TODO: Check if fine since integers are immutable
+            this.turns = new ArrayList<>(turns);
+        }
+
+        State copy() {
+            State state = new State(this.turns);
+            System.out.println(state.turns);
+            return state;
+        }
+
         private void addMove(int turn) {
             turns.add(turn);
         }
@@ -37,19 +48,16 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         this(C, T, board, new State());
     }
 
+    public Piece promote(PieceType T) {
+        return new Piece(this.C, T, this.board, this.state.copy());
+    }
+
     void moved(int turn) {
         if (state.turns.stream().anyMatch(i -> i >= turn)) {
             throw new IllegalStateException("Piece has already moved in the future?");
         }
 
         state.addMove(turn);
-    }
-
-    int lastMoved() {
-        if (state.turns.isEmpty()) {
-            return -1;
-        }
-        return state.turns.get(state.turns.size() - 1);
     }
 
     PieceColor getColor() {
@@ -169,53 +177,51 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
 
         // Check squares to the right
         for (int i = posArr[1] + 1; i < 8; ++i) {
-            if (board.isFriendly(piece.C, Notation.get(posArr[0], i))) {
-                break;
-            }
-            Move move = new Move(pos, Notation.get(posArr[0], i));
-            moves.add(move);
-            if (board.isEnemy(piece.C, Notation.get(posArr[0], i))) {
+            Notation square = Notation.get(posArr[0], i);
+            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
 
         // Check squares to the left
         for (int i = posArr[1] - 1; i >= 0; --i) {
-            if (board.isFriendly(piece.C, Notation.get(posArr[0], i))) {
-                break;
-            }
-            Move move = new Move(pos, Notation.get(posArr[0], i));
-            moves.add(move);
-            if (board.isEnemy(piece.C, Notation.get(posArr[0], i))) {
+            Notation square = Notation.get(posArr[0], i);
+            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
 
         // Check squares above
         for (int i = posArr[0] + 1; i < 8; ++i) {
-            if (board.isFriendly(piece.C, Notation.get(i, posArr[1]))) {
-                break;
-            }
-            Move move = new Move(pos, Notation.get(i, posArr[1]));
-            moves.add(move);
-            if (board.isEnemy(piece.C, Notation.get(i, posArr[1]))) {
+            Notation square = Notation.get(i, posArr[1]);
+            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
 
         // Check squares below
         for (int i = posArr[0] - 1; i >= 0; --i) {
-            if (board.isFriendly(piece.C, Notation.get(i, posArr[1]))) {
-                break;
-            }
-            Move move = new Move(pos, Notation.get(i, posArr[1]));
-            moves.add(move);
-            if (board.isEnemy(piece.C, Notation.get(i, posArr[1]))) {
+            Notation square = Notation.get(i, posArr[1]);
+            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
 
         return moves;
+    }
+
+    /**
+     *
+     * @return if the piece can continue adding squares
+     */
+    private boolean addSlidingSquare(Board board, Piece piece, Notation initial, Notation pos,
+                                     Set<Move> moveSet) {
+        if (board.isFriendly(piece.C, pos)) {
+            return false;
+        }
+        Move move = new Move(initial, pos);
+        moveSet.add(move);
+        return !board.isEnemy(piece.C, pos);
     }
 
     /**
@@ -256,52 +262,44 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
 
         // Check squares to the upper right
         for (int i = 1; i < 8; ++i) {
-            if (!Board.inBounds(posArr[0] + i, posArr[1] + i) || board.isFriendly(piece.C,
-                    Notation.get(posArr[0] + i, posArr[1] + i))) {
+            if (!Board.inBounds(posArr[0] + i, posArr[1] + i)) {
                 break;
             }
-            Move move = new Move(pos, Notation.get(posArr[0] + i, posArr[1] + i));
-            moves.add(move);
-            if (board.isEnemy(piece.C, Notation.get(posArr[0] + i, posArr[1] + i))) {
+            Notation square = Notation.get(posArr[0] + i, posArr[1] + i);
+            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
 
         // Check squares to the lower right
         for (int i = 1; i < 8; ++i) {
-            if (!Board.inBounds(posArr[0] - i, posArr[1] + i) || board.isFriendly(piece.C,
-                    Notation.get(posArr[0] - i, posArr[1] + i))) {
+            if (!Board.inBounds(posArr[0] - i, posArr[1] + i)) {
                 break;
             }
-            Move move = new Move(pos, Notation.get(posArr[0] - i, posArr[1] + i));
-            moves.add(move);
-            if (board.isEnemy(piece.C, Notation.get(posArr[0] - i, posArr[1] + i))) {
+            Notation square = Notation.get(posArr[0] - i, posArr[1] + i);
+            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
 
         // Check squares to the lower left
         for (int i = 1; i < 8; ++i) {
-            if (!Board.inBounds(posArr[0] - i, posArr[1] - i) || board.isFriendly(piece.C,
-                    Notation.get(posArr[0] - i, posArr[1] - i))) {
+            if (!Board.inBounds(posArr[0] - i, posArr[1] - i)) {
                 break;
             }
-            Move move = new Move(pos, Notation.get(posArr[0] - i, posArr[1] - i));
-            moves.add(move);
-            if (board.isEnemy(piece.C, Notation.get(posArr[0] - i, posArr[1] - i))) {
+            Notation square = Notation.get(posArr[0] - i, posArr[1] - i);
+            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
 
         // Check squares to the upper left
         for (int i = 1; i < 8; ++i) {
-            if (!Board.inBounds(posArr[0] + i, posArr[1] - i) || board.isFriendly(piece.C,
-                    Notation.get(posArr[0] + i, posArr[1] - i))) {
+            if (!Board.inBounds(posArr[0] + i, posArr[1] - i)) {
                 break;
             }
-            Move move = new Move(pos, Notation.get(posArr[0] + i, posArr[1] - i));
-            moves.add(move);
-            if (board.isEnemy(piece.C, Notation.get(posArr[0] + i, posArr[1] - i))) {
+            Notation square = Notation.get(posArr[0] + i, posArr[1] - i);
+            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }

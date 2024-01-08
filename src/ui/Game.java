@@ -90,6 +90,8 @@ class UIBoard extends JPanel {
     private final AIStatus ai;
     private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
     private static final Color DARK_SQUARE = new Color(181, 136, 99);
+    private static final Color HIGHLIGHT_LEGAL = Color.GREEN;
+    private static final Color HIGHLIGHT_CHECK = Color.RED;
 
     UIBoard(UIStatusBar uiStatusBar, GridLayout gridLayout) {
         super(gridLayout);
@@ -158,6 +160,7 @@ class UIBoard extends JPanel {
         ai.aiPlayer = !ai.aiPlayer;
         uiStatusBar.setStatus(String.format("AI Player %s with color=%s", ai.aiPlayer ?
                 "enabled" : "disabled", ai.aiColor));
+        updateBoard();
     }
 
     /**
@@ -187,7 +190,7 @@ class UIBoard extends JPanel {
                     logicBoard.getPieceLegalMoves(notation);
             for (Move m : currentGreenSquares) {
                 byte[] pos = m.end().getPosition();
-                squares[pos[0]][pos[1]].setBackground(Color.GREEN);
+                squares[pos[0]][pos[1]].setBackground(HIGHLIGHT_LEGAL);
             }
         } else {
             // Finalize move
@@ -201,20 +204,37 @@ class UIBoard extends JPanel {
                 if (selectedMove != null) {
                     uiStatusBar.setStatus("Move " + selectedMove);
                     try {
+                        Notation beforeMove = logicBoard.getKing(logicBoard.currentPlayerColor);
+                        byte[] beforeMoveArr = beforeMove.getPosition();
+                        squares[beforeMoveArr[0]][beforeMoveArr[1]].setBackground((beforeMoveArr[0] + beforeMoveArr[1]) % 2 == 0 ?
+                                LIGHT_SQUARE : DARK_SQUARE);
+
                         if (selectedMove.moveType() == Move.MoveType.PROMOTION) {
                             selectedMove = managePromotion(selectedMove);
                         }
                         Piece captured = logicBoard.movePiece(selectedMove);
                         System.out.println("Captured: " + captured);
+                        Notation afterMove = logicBoard.getKing(logicBoard.currentPlayerColor);
+                        byte[] afterMoveArr = afterMove.getPosition();
                         boolean gameOver = switch (logicBoard.gameStatus()) {
-                            case 2, 3:
+                            case 0:
+                                yield false;
+                            case 1:
+                                squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(HIGHLIGHT_CHECK);
+                                yield false;
+                            case 2:
+                                yield true;
+                            case 3:
+                                squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(HIGHLIGHT_CHECK);
                                 yield true;
                             default:
-                                yield false;
+                                throw new IllegalStateException("Invalid game status");
                         };
                         if (gameOver) {
                             uiStatusBar.setStatus("Game Over");
                             // Causes IllegalStateException for thread not owner
+                            uiStatusBar.setStatus(String.format("%s wins!",
+                                    Piece.PieceColor.opposite(logicBoard.currentPlayerColor)));
                             wait(1_000);
                             resetGame();
                         }

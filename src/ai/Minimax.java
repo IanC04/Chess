@@ -1,19 +1,12 @@
 package ai;
 
-import logic.Board;
-
 /**
  * Minimax wrapper class
  */
 public class Minimax {
-
-    // Game state to evaluate
-    private final Board STATE;
-
     private final BitBoards bitBoards;
 
-    public Minimax(Board state) {
-        this.STATE = state;
+    public Minimax() {
         this.bitBoards = new BitBoards();
     }
 
@@ -36,13 +29,14 @@ public class Minimax {
      * @param depth
      * @param alpha
      * @param beta
+     * @param maximizingPlayer
      * @return
      */
-    private long minimax(int depth, Board board, int alpha, int beta, boolean maximizingPlayer) {
+    private long minimax(int depth, int alpha, int beta, boolean maximizingPlayer) {
         return 0;
     }
 
-    private long evaluateBoard(Board board) {
+    private long evaluateBoard() {
         return 0;
     }
 }

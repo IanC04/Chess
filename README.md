@@ -2,4 +2,5 @@
 Small Chess AI. Started on 11/19/2023.
 
 # Introduction
-Attempts to beat noobs at chess.
+Contains a pass-to-play UI or the option of playing a CPU.
+The CPU attempts to beat noobs at chess.
