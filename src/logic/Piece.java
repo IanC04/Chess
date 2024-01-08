@@ -45,6 +45,13 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         state.addMove(turn);
     }
 
+    int lastMoved() {
+        if (state.turns.isEmpty()) {
+            return -1;
+        }
+        return state.turns.get(state.turns.size() - 1);
+    }
+
     PieceColor getColor() {
         return C;
     }
@@ -339,13 +346,18 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         }
 
         // Castling
-        if (piece.state.turns.isEmpty()) {
-            boolean canCastleLeft = canCastleLeft(board, piece, pos);
-            boolean canCastleRight = canCastleRight(board, piece, pos);
+        boolean[] castlingRights = castlingRights(board, piece.C);
+        // Left
+        if (castlingRights[0]) {
+            boolean canCastleLeft = castleLeftThisTurn(board, piece, pos);
             if (canCastleLeft) {
                 Move move = new Move(pos, Notation.get(posArr[0], 2), Move.MoveType.CASTLE);
                 moves.add(move);
             }
+        }
+        // Right
+        if (castlingRights[1]) {
+            boolean canCastleRight = castleRightThisTurn(board, piece, pos);
             if (canCastleRight) {
                 Move move = new Move(pos, Notation.get(posArr[0], 6), Move.MoveType.CASTLE);
                 moves.add(move);
@@ -355,48 +367,84 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         return moves;
     }
 
-    private static boolean canCastleLeft(Board board, Piece piece, Notation pos) {
-        byte[] posArr = pos.getPosition();
-
-        Piece leftRook = board.getPiece(posArr[0], 0);
-        if (leftRook != null && leftRook.T == PieceType.ROOK && leftRook.state.turns.isEmpty()) {
-            if (!board.safeSquare(piece.C, null, pos)) {
-                return false;
-            }
-
-            for (int j = 2; j < posArr[1]; ++j) {
-                Notation notation = Notation.get(posArr[0], j);
-                if (!board.isFree(notation) || !board.safeSquare(piece.C,
-                        new Move(pos, notation), notation)) {
-                    return false;
-                }
-            }
-            return true;
+    /**
+     * Returns the castling rights for the given color, not if the king can castle this turn
+     *
+     * @param board containing the pieces
+     * @param color of the king
+     * @return array of booleans, [0] is left, [1] is right
+     */
+    static boolean[] castlingRights(Board board, PieceColor color) {
+        boolean left = true;
+        boolean right = true;
+        Piece king = board.getPiece(color == WHITE ? Notation.E1 : Notation.E8);
+        if (king == null || king.T != PieceType.KING || king.C != color || !king.state.turns.isEmpty()) {
+            left = false;
+            right = false;
+        }
+        Piece leftRook = board.getPiece(color == WHITE ? Notation.A1 : Notation.A8);
+        if (leftRook == null || leftRook.T != PieceType.ROOK || leftRook.C != color || !leftRook.state.turns.isEmpty()) {
+            left = false;
+        }
+        Piece rightRook = board.getPiece(color == WHITE ? Notation.H1 : Notation.H8);
+        if (rightRook == null || rightRook.T != PieceType.ROOK || rightRook.C != color || !rightRook.state.turns.isEmpty()) {
+            right = false;
         }
 
-        return false;
+        return new boolean[]{left, right};
     }
 
-    private static boolean canCastleRight(Board board, Piece piece, Notation pos) {
-        byte[] posArr = pos.getPosition();
-
-        Piece rightRook = board.getPiece(posArr[0], 7);
-        if (rightRook != null && rightRook.T == PieceType.ROOK && rightRook.state.turns.isEmpty()) {
-            if (!board.safeSquare(piece.C, null, pos)) {
-                return false;
-            }
-
-            for (int j = posArr[1] + 1; j < 7; ++j) {
-                Notation notation = Notation.get(posArr[0], j);
-                if (!board.isFree(notation) || !board.safeSquare(piece.C, new Move(pos, notation),
-                        notation)) {
-                    return false;
-                }
-            }
-            return true;
+    private static boolean castleLeftThisTurn(Board board, Piece king, Notation pos) {
+        Piece kingSpot = board.getPiece(pos);
+        if (kingSpot == null || kingSpot.T != PieceType.KING || kingSpot.C != king.C) {
+            throw new IllegalArgumentException("No king at " + pos);
         }
 
-        return false;
+        byte[] posArr = pos.getPosition();
+        for (int j = 1; j < posArr[1]; ++j) {
+            Notation notation = Notation.get(posArr[0], j);
+            if (!board.isFree(notation)) {
+                return false;
+            }
+        }
+        for (int j = 2; j <= posArr[1]; ++j) {
+            Notation notation = Notation.get(posArr[0], j);
+            Move move = pos == notation ? null : new Move(pos, notation);
+            if (!board.safeSquare(king.C, move, notation)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean castleRightThisTurn(Board board, Piece king, Notation pos) {
+        Piece kingSpot = board.getPiece(pos);
+        if (kingSpot == null || kingSpot.T != PieceType.KING || kingSpot.C != king.C) {
+            throw new IllegalArgumentException("No king at " + pos);
+        }
+
+        byte[] posArr = pos.getPosition();
+        for (int j = posArr[1] + 1; j < 7; ++j) {
+            Notation notation = Notation.get(posArr[0], j);
+            if (!board.isFree(notation)) {
+                return false;
+            }
+        }
+        for (int j = posArr[1]; j < 7; ++j) {
+            Notation notation = Notation.get(posArr[0], j);
+            Move move = pos == notation ? null : new Move(pos, notation);
+            if (!board.safeSquare(king.C, move, notation)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @return true if this piece is a pawn that can be captured en-passant
+     */
+    boolean enPassantTarget() {
+        return T == PieceType.PAWN && state.turns.size() == 1 && state.turns.get(0) == board.getTurn() - 1;
     }
 
     /**

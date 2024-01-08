@@ -518,8 +518,9 @@ public class Board {
      *
      * @return FEN string
      */
-    public String getFENBoard() {
+    public String getFEN() {
         StringBuilder fen = new StringBuilder();
+        // Board positions
         for (int i = 7; i >= 0; --i) {
             int emptyLength = 0;
             for (int j = 0; j < 8; ++j) {
@@ -548,12 +549,65 @@ public class Board {
             if (emptyLength > 0) {
                 fen.append(emptyLength);
             }
+            if (i > 0) {
+                fen.append('/');
+            }
         }
+        // Who's turn it is
+        fen.append(' ').append(currentPlayerColor == WHITE ? 'w' : 'b');
+        // Castling rights
+        boolean[] whiteCastlingRights = Piece.castlingRights(this, WHITE);
+        boolean[] blackCastlingRights = Piece.castlingRights(this, BLACK);
+        String w = (whiteCastlingRights[0] ? "K" : "") + (whiteCastlingRights[1] ? "Q" : "");
+        String b = (blackCastlingRights[0] ? "k" : "") + (blackCastlingRights[1] ? "q" : "");
+        fen.append(' ').append(w.isBlank() && b.isBlank() ? '-' : (w + b));
+        // En passant
+        boolean enPassantFound = false;
+        int row = currentPlayerColor == WHITE ? 4 : 3;
+        for (int i = 0; i < 8; ++i) {
+            Piece piece = getPiece(row, i);
+            if (piece != null && piece.enPassantTarget()) {
+                if (enPassantFound) {
+                    throw new IllegalStateException("Multiple en-passant targets");
+                }
+                fen.append(' ').append(Notation.get(row, i).toString().toLowerCase());
+                enPassantFound = true;
+            }
+        }
+        if (!enPassantFound) {
+            fen.append(" -");
+        }
+        // Half-move clock
+        int lastHalfMove = getLatestHalfMove();
+        fen.append(' ').append(lastHalfMove == -1 ? 0 : turn - lastHalfMove);
+        // Full-move number
+        fen.append(' ').append(turn / 2);
         return fen.toString();
     }
 
+    private int getLatestHalfMove() {
+        int lastHalfMove = -1;
+        for (Notation pos : Notation.ALL_VALUES) {
+            Piece piece = getPiece(pos);
+            if (piece == null) {
+                continue;
+            }
+            if (piece.getType() == PAWN) {
+                lastHalfMove = Math.max(lastHalfMove, piece.lastMoved());
+            } else {
+                // TODO: Check for capture move type
+                lastHalfMove = Math.max(lastHalfMove, piece.lastMoved());
+            }
+        }
+        return lastHalfMove;
+    }
+
     public void aiMove() {
-        long move = ai.getBestMove(currentPlayerColor == WHITE);
+        String FEN = getFEN();
+        if (FEN.isBlank()) {
+            throw new IllegalStateException("Invalid FEN");
+        }
+        long move = ai.getBestMove(FEN);
         if (Long.bitCount(move) != 2) {
             throw new IllegalStateException("Invalid move");
         }

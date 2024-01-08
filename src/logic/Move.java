@@ -3,6 +3,7 @@ package logic;
 public record Move(Notation start, Notation end, MoveType moveType,
                    Piece.PieceType promoteTo) implements Comparable<Move> {
 
+    // TODO: Add capture move type for half move clock
     public enum MoveType {
         NORMAL, CASTLE, EN_PASSANT, PROMOTION
     }
