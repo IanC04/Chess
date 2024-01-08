@@ -47,7 +47,7 @@ public class Board {
         GameStatus gameStatus;
         final Piece.PieceColor color;
 
-        HashMap<Piece, Set<Move>> allLegalMoves;
+        final HashMap<Piece, Set<Move>> allLegalMoves;
 
         private enum GameStatus {
             NORMAL, CHECK, STALEMATE, CHECKMATE
@@ -198,7 +198,7 @@ public class Board {
         updateBoard(oldPos, newPos);
         updateBoard(Notation.get(oldPos.getPosition()[0], (newPos.getPosition()[1] > oldPos.getPosition()[1]) ? 7 : 0),
                 Notation.get(oldPos.getPosition()[0], (newPos.getPosition()[1] > oldPos.getPosition()[1]) ? 5 : 3));
-        return null;
+        return captured;
     }
 
     private Piece movePiecePromotion(Notation oldPos, Notation newPos,

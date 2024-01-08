@@ -28,14 +28,6 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
             this.turns = new ArrayList<>();
         }
 
-        State(List<Integer> turnList) {
-            this.turns = new ArrayList<>(turnList);
-        }
-
-        State copy() {
-            return new State(turns);
-        }
-
         private void addMove(int turn) {
             turns.add(turn);
         }

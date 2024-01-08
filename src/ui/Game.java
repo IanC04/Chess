@@ -19,15 +19,13 @@ import logic.Piece;
 
 public class Game extends JFrame {
     private final UIStatusBar uiStatusBar;
-    private final UIPopup uiPopup;
     private final UIBoard uiBoard;
     private final UIToolBar uiToolBar;
 
     private Game() {
         // Initialize final variables
         uiStatusBar = new UIStatusBar();
-        uiPopup = new UIPopup();
-        uiBoard = new UIBoard(uiStatusBar, uiPopup, new GridLayout(0, 9));
+        uiBoard = new UIBoard(uiStatusBar, new GridLayout(0, 9));
         uiToolBar = new UIToolBar(uiBoard);
         initializeUI();
     }
@@ -69,7 +67,6 @@ public class Game extends JFrame {
 
 class UIBoard extends JPanel {
     private final UIStatusBar uiStatusBar;
-    private final UIPopup uiPopup;
     private final Board logicBoard;
     private final JButton[][] squares;
     private Notation squareSelected;
@@ -94,10 +91,9 @@ class UIBoard extends JPanel {
     private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
     private static final Color DARK_SQUARE = new Color(181, 136, 99);
 
-    UIBoard(UIStatusBar uiStatusBar, UIPopup uiPopup, GridLayout gridLayout) {
+    UIBoard(UIStatusBar uiStatusBar, GridLayout gridLayout) {
         super(gridLayout);
         this.uiStatusBar = uiStatusBar;
-        this.uiPopup = uiPopup;
         this.logicBoard = new Board();
         this.squares = new JButton[8][8];
         this.ai = new AIStatus();
@@ -174,7 +170,7 @@ class UIBoard extends JPanel {
                 squares[i][j].setText(Objects.requireNonNullElse(logicBoard.getPiece(i, j), "").toString());
             }
         }
-        uiStatusBar.setStatus((logicBoard.getTurn() % 2 == 1 ? "White" : "Black") + "'s turn");
+        uiStatusBar.setStatus(String.format("%s's turn", logicBoard.currentPlayerColor));
 
         if (ai.aiPlayer && logicBoard.currentPlayerColor == ai.aiColor) {
             logicBoard.aiMove();
@@ -183,7 +179,8 @@ class UIBoard extends JPanel {
     }
 
     private void manageClick(Notation notation) {
-        if (squareSelected == null && logicBoard.getPiece(notation) != null) {
+        Piece selectedPiece = logicBoard.getPiece(notation);
+        if (squareSelected == null && selectedPiece != null && selectedPiece.C() == logicBoard.currentPlayerColor) {
             // Show possible moving squares
             squareSelected = notation;
             currentGreenSquares =
@@ -200,18 +197,14 @@ class UIBoard extends JPanel {
                     squares[pos[0]][pos[1]].setBackground((pos[0] + pos[1]) % 2 == 0 ?
                             LIGHT_SQUARE : DARK_SQUARE);
                 }
-                Move selected = currentGreenSquares.stream().filter(m -> m.end().equals(notation)).findFirst().orElse(null);
-                if (selected != null) {
-                    uiStatusBar.setStatus("Move " + selected);
+                Move selectedMove = currentGreenSquares.stream().filter(m -> m.end().equals(notation)).findFirst().orElse(null);
+                if (selectedMove != null) {
+                    uiStatusBar.setStatus("Move " + selectedMove);
                     try {
-                        // Promotion
-                        uiPopup.show(this, 0, 0);
-                        if (selected.moveType() == Move.MoveType.PROMOTION) {
-                            selected = new Move(selected.start(), selected.end(),
-                                    selected.moveType(), Piece.PieceType.QUEEN);
+                        if (selectedMove.moveType() == Move.MoveType.PROMOTION) {
+                            selectedMove = managePromotion(selectedMove);
                         }
-
-                        Piece captured = logicBoard.movePiece(selected);
+                        Piece captured = logicBoard.movePiece(selectedMove);
                         System.out.println("Captured: " + captured);
                         boolean gameOver = switch (logicBoard.gameStatus()) {
                             case 2, 3:
@@ -229,6 +222,8 @@ class UIBoard extends JPanel {
                         System.err.println("Bad argument: " + e.getMessage());
                     } catch (InterruptedException e) {
                         System.err.println("Interrupt: " + e.getMessage());
+                    } catch (IllegalStateException e) {
+                        System.err.println("Probably wait error: " + e.getMessage());
                     }
                 }
             }
@@ -237,6 +232,21 @@ class UIBoard extends JPanel {
         }
 
         updateBoard();
+    }
+
+    private Move managePromotion(Move move) {
+        final String MESSAGE = "Choose Promotion Type", TITLE = "Pawn Promotion";
+        int option = JOptionPane.showOptionDialog(this, MESSAGE, TITLE, JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE, null,
+                new Piece.PieceType[]{Piece.PieceType.ROOK,
+                        Piece.PieceType.KNIGHT, Piece.PieceType.BISHOP,
+                        Piece.PieceType.QUEEN}, Piece.PieceType.QUEEN);
+        if (option == JOptionPane.DEFAULT_OPTION) {
+            option = Piece.PieceType.QUEEN.ordinal();
+        } else {
+            ++option;
+        }
+        return new Move(move.start(), move.end(), move.moveType(), Piece.PieceType.values()[option]);
     }
 
     @Override
@@ -307,8 +317,4 @@ class UIStatusBar extends JLabel {
         System.out.println(status);
         setText(status);
     }
-}
-
-class UIPopup extends JPopupMenu {
-
 }
