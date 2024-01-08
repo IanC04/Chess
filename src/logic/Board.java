@@ -12,16 +12,18 @@ import static logic.Piece.PieceColor.*;
 import static logic.Piece.PieceType.*;
 
 public class Board {
+    // Singleton
+    private static boolean INITIALIZED = false;
 
     /**
-     * Stored as 1-D array to support algebraic notation indexing
+     * Piece array to support algebraic notation indexing
      */
     private final Piece[][] CHESS_BOARD;
 
     /**
      * true if white's turn, false if black's
      */
-    private boolean whiteToPlay;
+    public Piece.PieceColor currentPlayerColor;
 
     /**
      * The current game turn
@@ -45,10 +47,10 @@ public class Board {
         GameStatus gameStatus;
         final Piece.PieceColor color;
 
-        HashMap<Piece, Set<Move>> allPossibleMoves;
+        HashMap<Piece, Set<Move>> allLegalMoves;
 
         private enum GameStatus {
-            NORMAL, CHECK, CHECKMATE, STALEMATE
+            NORMAL, CHECK, STALEMATE, CHECKMATE
         }
 
         private PlayerStatus(Piece.PieceColor color) {
@@ -59,52 +61,32 @@ public class Board {
             this.color = color;
             this.king = king;
             this.gameStatus = gameStatus;
-            this.allPossibleMoves = new HashMap<>();
-        }
-
-        public PlayerStatus copy() {
-            return new PlayerStatus(this.color, this.king, this.gameStatus);
+            this.allLegalMoves = new HashMap<>();
         }
 
         public void reset() {
             this.king = color == WHITE ? E1 : E8;
             this.gameStatus = GameStatus.NORMAL;
-            this.allPossibleMoves.clear();
+            this.allLegalMoves.clear();
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s with king at %s", color, king);
         }
     }
 
     public Board() {
+        if (Board.INITIALIZED) {
+            throw new IllegalStateException("Board already exists.");
+        }
+        Board.INITIALIZED = true;
+
         this.CHESS_BOARD = new Piece[8][8];
-        this.whiteToPlay = true;
         this.ai = new Minimax(this);
         this.whiteStatus = new PlayerStatus(WHITE);
         this.blackStatus = new PlayerStatus(BLACK);
         resetBoard();
-    }
-
-    /**
-     * Must be used only when generating temporary boards
-     *
-     * @param board to copy
-     */
-    public Board(Board board) {
-        this.CHESS_BOARD = new Piece[8][8];
-        this.whiteToPlay = board.whiteToPlay;
-        this.ai = null;
-        for (int i = 0; i < 8; ++i) {
-            for (int j = 0; j < CHESS_BOARD[i].length; ++j) {
-                Piece piece = board.CHESS_BOARD[i][j];
-                if (piece == null) {
-                    continue;
-                }
-                CHESS_BOARD[i][j] = piece.copy(this);
-            }
-        }
-        this.turn = board.turn;
-        this.whiteStatus = board.whiteStatus.copy();
-        this.blackStatus = board.blackStatus.copy();
-        this.whiteStatus.allPossibleMoves = new HashMap<>(board.whiteStatus.allPossibleMoves);
-        this.blackStatus.allPossibleMoves = new HashMap<>(board.blackStatus.allPossibleMoves);
     }
 
     /**
@@ -163,12 +145,11 @@ public class Board {
         }
 
         // White goes first
-        this.whiteToPlay = true;
+        this.currentPlayerColor = WHITE;
         this.turn = 1;
         this.whiteStatus.reset();
         this.blackStatus.reset();
-        this.generateAllPossibleMoves(whiteStatus);
-        this.generateAllPossibleMoves(blackStatus);
+        generateAllLegalMoves(this.whiteStatus);
     }
 
     /**
@@ -236,7 +217,6 @@ public class Board {
 
     /**
      * Moves the piece at oldPos to newPos
-     * TODO: Fix game status issues
      *
      * @param move move made
      * @return the captured piece, if any
@@ -251,7 +231,7 @@ public class Board {
         if (getPiece(oldPos) == null) {
             throw new IllegalArgumentException("No piece exists at " + oldPos);
         }
-        if (getPiece(oldPos).getColor() != (whiteToPlay ? WHITE : BLACK)) {
+        if (getPiece(oldPos).getColor().ordinal() != currentPlayerColor.ordinal()) {
             throw new IllegalArgumentException("Piece color does not match turn");
         }
 
@@ -260,30 +240,26 @@ public class Board {
             case NORMAL -> movePieceNormal(oldPos, newPos);
             case EN_PASSANT -> movePieceEnPassant(oldPos, newPos);
             case CASTLE -> movePieceCastle(oldPos, newPos);
-            case PROMOTION -> movePiecePromotion(oldPos, newPos, getPromotionType());
+            case PROMOTION -> movePiecePromotion(oldPos, newPos, move.promoteTo());
         };
 
         if (move.moveType() == Move.MoveType.PROMOTION) {
             originalPiece = getPiece(newPos);
         }
-        updateStatus(originalPiece, move);
-
         originalPiece.moved(turn);
-        whiteToPlay = !whiteToPlay;
+        currentPlayerColor = Piece.PieceColor.opposite(currentPlayerColor);
         ++turn;
 
+        updateStatus(originalPiece, move);
         return captured;
     }
 
     /**
-     * TODO: Add functionality for promotion type selection
+     * Writes the move to the CHESS_BOARD field
      *
-     * @return promotion type
+     * @param oldPos initial position
+     * @param newPos ending position
      */
-    private Piece.PieceType getPromotionType() {
-        return QUEEN;
-    }
-
     private void updateBoard(Notation oldPos, Notation newPos) {
         byte[] newPosArr = newPos.getPosition();
         CHESS_BOARD[newPosArr[0]][newPosArr[1]] = getPiece(oldPos);
@@ -291,7 +267,12 @@ public class Board {
         CHESS_BOARD[oldPosArr[0]][oldPosArr[1]] = null;
     }
 
-    void updateBoard(Move move) {
+    /**
+     * Writes the move to the CHESS_BOARD field
+     *
+     * @param move move made
+     */
+    private void updateBoard(Move move) {
         updateBoard(move.start(), move.end());
     }
 
@@ -331,89 +312,94 @@ public class Board {
      *
      * @return set of possible moves
      */
-    public Set<Move> getAllPossibleMoves() {
-        PlayerStatus status = whiteToPlay ? whiteStatus : blackStatus;
-        if (status.allPossibleMoves.isEmpty()) {
+    public Set<Move> getAllLegalMoves() {
+        PlayerStatus status = currentPlayerColor == Piece.PieceColor.WHITE ? whiteStatus :
+                blackStatus;
+        if (status.allLegalMoves.isEmpty()) {
             throw new IllegalStateException("No possible moves generated");
         }
 
-        return status.allPossibleMoves.values().stream().flatMap(Set::stream).collect(Collectors.toSet());
+        return status.allLegalMoves.values().stream().flatMap(Set::stream).collect(Collectors.toSet());
     }
 
     /**
-     * Returns all possible moves of the piece at pos
+     * Returns all legal moves of the piece at pos
      *
      * @param pos position
      * @return set of possible moves
      */
-    public Set<Move> getPiecePossibleMoves(Notation pos) {
+    public Set<Move> getPieceLegalMoves(Notation pos) {
         if (isFree(pos)) {
             throw new IllegalArgumentException("No piece exists at " + pos);
         }
 
         PlayerStatus status = getPiece(pos).getColor() == WHITE ? whiteStatus : blackStatus;
-        if (status.allPossibleMoves.isEmpty()) {
-            throw new IllegalStateException("No possible moves generated");
+        if (status.allLegalMoves.isEmpty()) {
+            throw new IllegalStateException("Legal Moves not generated.");
         }
-        return status.allPossibleMoves.get(getPiece(pos));
+        return status.allLegalMoves.get(getPiece(pos));
     }
 
-    private void generateAllPossibleMoves(PlayerStatus status) {
+    private void generateAllLegalMoves(PlayerStatus status) {
         for (Notation currentPosition : Notation.ALL_VALUES) {
             if (!isFriendly(status.color, currentPosition)) {
                 continue;
             }
             Piece piece = getPiece(currentPosition);
             Set<Move> possibleMoves =
-                    piece.possibleMoves(currentPosition).stream().filter(m -> kingSafe(whiteToPlay
-                            , m)).collect(Collectors.toSet());
-            status.allPossibleMoves.put(piece, possibleMoves);
+                    piece.possibleMoves(currentPosition).stream().filter(m -> safeSquare(currentPlayerColor
+                            , m, status.king)).collect(Collectors.toSet());
+            status.allLegalMoves.put(piece, possibleMoves);
         }
     }
 
     /**
-     * Returns true if the king is safe after the given move
+     * Returns true if the square is safe after the given move
      *
-     * @param white player
-     * @param move move made
+     * @param playerColor  player
+     * @param move         move made, null if checking current status
+     * @param maybeKingPos position of the current player's king unless it's about to move
      * @return true if king is safe
      */
-    private boolean kingSafe(boolean white, Move move) {
-        // Board tempBoard = new Board(this);
-        // tempBoard.updateBoard(move);
-        //
-        // Piece.PieceColor color = white ? WHITE : BLACK;
-        // PlayerStatus player = white ? whiteStatus : blackStatus;
-        // for (Notation pos : Notation.ALL_VALUES) {
-        //     if (tempBoard.isEnemy(color, pos)) {
-        //         if (tempBoard.getPiece(pos).getType() == KING) {
-        //             continue;
-        //         }
-        //         Set<Move> possibleMoves = tempBoard.getPiece(pos).possibleMoves(pos);
-        //         if (possibleMoves.stream().anyMatch(m -> m.end().equals(player.king))) {
-        //             return false;
-        //         }
-        //     }
-        // }
-        return true;
-    }
+    boolean safeSquare(Piece.PieceColor playerColor, Move move, Notation maybeKingPos) {
+        Piece captured = null;
+        if (move != null) {
+            captured = getPiece(move.end());
+            updateBoard(move);
+        }
+        final Notation kingPos;
+        if (move != null && move.start() == maybeKingPos) {
+            kingPos = move.end();
+        } else {
+            kingPos = maybeKingPos;
+        }
+        byte[] kingPosArr = kingPos.getPosition();
 
-    /**
-     * Returns true if the player is in check
-     *
-     * @param white player
-     * @return true if in check
-     */
-    public boolean inCheck(boolean white) {
-        return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.CHECK;
-    }
+        boolean unsafe =
+                Arrays.stream(Notation.ALL_VALUES).filter(notation -> isEnemy(playerColor,
+                        notation)).anyMatch(enemyPos -> {
+                    Piece enemyPiece = getPiece(enemyPos);
+                    byte[] enemyPosArr = enemyPos.getPosition();
 
-    public boolean inCheckMate(boolean white) {
-        return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.CHECKMATE;
-    }
+                    return switch (enemyPiece.getType()) {
+                        case PAWN -> {
+                            int direction = enemyPiece.getColor() == WHITE ? 1 : -1;
+                            int columnDiff = kingPosArr[1] - enemyPosArr[1];
+                            yield kingPosArr[0] == enemyPosArr[0] + direction && (columnDiff == 1 || columnDiff == -1);
+                        }
+                        case KING ->
+                                Math.abs(kingPosArr[0] - enemyPosArr[0]) <= 1 && Math.abs(kingPosArr[1] - enemyPosArr[1]) <= 1;
+                        default -> enemyPiece.possibleMoves(enemyPos).
+                                stream().map(Move::end).collect(Collectors.toSet()).contains(kingPos);
+                    };
+                });
 
-    public boolean inStaleMate(boolean white) {
-        return (white ? whiteStatus.gameStatus : blackStatus.gameStatus) == PlayerStatus.GameStatus.STALEMATE;
+        if (move != null) {
+            updateBoard(move.end(), move.start());
+            byte[] endPos = move.end().getPosition();
+            CHESS_BOARD[endPos[0]][endPos[1]] = captured;
+        }
+        return !unsafe;
     }
 
     /**
@@ -422,91 +408,46 @@ public class Board {
      * @return Zero if normal, One if checked, Two if stalemated, Three if checkmated
      */
     public int gameStatus() {
-        PlayerStatus player = whiteToPlay ? whiteStatus : blackStatus;
+        PlayerStatus player = currentPlayerColor == Piece.PieceColor.WHITE ? whiteStatus :
+                blackStatus;
         return player.gameStatus.ordinal();
     }
 
     /**
      * Updates the status of the game
+     * Called AFTER turn and player are updated
      *
      * @param pieceMoved piece that was moved
      * @param move       move that was made
      */
     private void updateStatus(Piece pieceMoved, Move move) {
+        PlayerStatus playerJustMoved = currentPlayerColor == WHITE ?
+                blackStatus : whiteStatus;
         if (pieceMoved.getType() == KING) {
-            if (whiteToPlay) {
-                whiteStatus.king = move.end();
-            } else {
-                blackStatus.king = move.end();
-            }
+            playerJustMoved.king = move.end();
         }
 
         // Refresh move sets
-        whiteStatus.allPossibleMoves.clear();
-        blackStatus.allPossibleMoves.clear();
-        generateAllPossibleMoves(whiteStatus);
-        generateAllPossibleMoves(blackStatus);
+        playerJustMoved.allLegalMoves.clear();
 
-        PlayerStatus player = whiteToPlay ? whiteStatus : blackStatus;
-        PlayerStatus opponent = whiteToPlay ? blackStatus : whiteStatus;
-        boolean checked = checkIfInitiatedCheck(whiteToPlay, move);
+        PlayerStatus playerToCheckStatus = currentPlayerColor == WHITE ? whiteStatus :
+                blackStatus;
+
+        boolean checked = !safeSquare(playerToCheckStatus.color, null,
+                playerToCheckStatus.king);
+        generateAllLegalMoves(playerToCheckStatus);
+        boolean noMoves = getAllLegalMoves().isEmpty();
         if (checked) {
-            opponent.gameStatus = PlayerStatus.GameStatus.CHECK;
-            boolean mated = checkIfInitiatedMate(whiteToPlay);
-            if (mated) {
-                opponent.gameStatus = PlayerStatus.GameStatus.CHECKMATE;
-            }
-        } else {
-            boolean stalemate = checkIfInitiatedStalemate(whiteToPlay);
-            if (stalemate) {
-                player.gameStatus = PlayerStatus.GameStatus.STALEMATE;
-                opponent.gameStatus = PlayerStatus.GameStatus.STALEMATE;
+            if (noMoves) {
+                playerToCheckStatus.gameStatus = PlayerStatus.GameStatus.CHECKMATE;
             } else {
-                player.gameStatus = PlayerStatus.GameStatus.NORMAL;
-                opponent.gameStatus = PlayerStatus.GameStatus.NORMAL;
+                playerToCheckStatus.gameStatus = PlayerStatus.GameStatus.CHECK;
             }
+        } else if (noMoves) {
+            playerToCheckStatus.gameStatus = PlayerStatus.GameStatus.STALEMATE;
+        } else {
+            playerToCheckStatus.gameStatus = PlayerStatus.GameStatus.NORMAL;
         }
-    }
-
-    /**
-     * Checks if the player is checking opponent by checking if king is on dangerous square
-     *
-     * @param white player
-     * @return true if checked
-     */
-    private boolean checkIfInitiatedCheck(boolean white, Move move) {
-        PlayerStatus opponent = white ? blackStatus : whiteStatus;
-        PlayerStatus player = white ? whiteStatus : blackStatus;
-        getPiecePossibleMoves(move.end());
-        return player.allPossibleMoves.values().stream().anyMatch(pieces -> pieces.stream().anyMatch(m -> m.end().equals(opponent.king)));
-    }
-
-    /**
-     * Checks if the player is mated by checking if all possible moves result in king in check
-     *
-     * @param white player
-     * @return true if mated
-     */
-    private boolean checkIfInitiatedMate(boolean white) {
-        if (!inCheck(!white)) {
-            throw new IllegalStateException("Player not in check, cannot be checkmate");
-        }
-        PlayerStatus opponent = white ? blackStatus : whiteStatus;
-        return opponent.allPossibleMoves.values().stream().allMatch(Set::isEmpty);
-    }
-
-    /**
-     * Checks if the player is stalemated by checking if there are no possible moves
-     *
-     * @param white player
-     * @return true if stalemate
-     */
-    private boolean checkIfInitiatedStalemate(boolean white) {
-        if (inCheck(!white)) {
-            throw new IllegalStateException("Player in check, cannot be stalemate");
-        }
-        PlayerStatus opponent = white ? blackStatus : whiteStatus;
-        return opponent.allPossibleMoves.values().stream().allMatch(Set::isEmpty);
     }
 
     /**
@@ -556,7 +497,7 @@ public class Board {
      * @param pos position
      * @return true if in bounds
      */
-    public static boolean inBounds(Notation pos) {
+    static boolean inBounds(Notation pos) {
         byte[] posArr = pos.getPosition();
         return posArr[0] >= 0 && posArr[0] < 8 && posArr[1] >= 0 && posArr[1] < 8;
     }
@@ -568,72 +509,64 @@ public class Board {
      * @param col index
      * @return true if in bounds
      */
-    public static boolean inBounds(int row, int col) {
+    static boolean inBounds(int row, int col) {
         return row >= 0 && row < 8 && col >= 0 && col < 8;
     }
 
     /**
-     * Returns the bitboard representation of the board
-     *
-     * @return bitboard
-     */
-    public int[][] getBitBoard() {
-        int[][] bitBoard = new int[CHESS_BOARD.length][CHESS_BOARD[0].length];
-        for (int i = 0; i < CHESS_BOARD.length; ++i) {
-            for (int j = 0; j < CHESS_BOARD[i].length; ++j) {
-                Piece piece = CHESS_BOARD[i][j];
-                if (piece == null) {
-                    continue;
-                }
-                bitBoard[i][j] = piece.getBitRepresentation();
-            }
-        }
-        return bitBoard;
-    }
-
-    /**
      * Returns the FEN string representing the position of the current board
-     * TODO: Fix
+     *
      * @return FEN string
      */
     public String getFENBoard() {
         StringBuilder fen = new StringBuilder();
-        int emptyLength = 0;
-        for(Notation notation : ALL_VALUES) {
-            Piece piece = getPiece(notation);
-            if (piece == null) {
-                ++emptyLength;
-            } else {
+        for (int i = 7; i >= 0; --i) {
+            int emptyLength = 0;
+            for (int j = 0; j < 8; ++j) {
+                Piece piece = getPiece(i, j);
+                if (piece == null) {
+                    ++emptyLength;
+                    continue;
+                }
                 if (emptyLength > 0) {
                     fen.append(emptyLength);
                     emptyLength = 0;
                 }
-                fen.append(piece);
+                Character p = switch (piece.T()) {
+                    case PAWN -> 'p';
+                    case ROOK -> 'r';
+                    case KNIGHT -> 'n';
+                    case BISHOP -> 'b';
+                    case QUEEN -> 'q';
+                    case KING -> 'k';
+                };
+                if (piece.C() == WHITE) {
+                    p = Character.toUpperCase(p);
+                }
+                fen.append(p);
+            }
+            if (emptyLength > 0) {
+                fen.append(emptyLength);
             }
         }
         return fen.toString();
     }
 
     public void aiMove() {
-        Move move = ai.getBestMove(whiteToPlay);
-        movePiece(move);
-    }
-
-    public int evaluate(boolean whiteToPlay) {
-        int score = 0;
-        Piece.PieceColor currentColor = whiteToPlay ? WHITE : BLACK;
-        for (Notation pos : Notation.ALL_VALUES) {
-            Piece piece = getPiece(pos);
-            if (piece == null) {
-                continue;
-            }
-            if (isFriendly(currentColor, pos)) {
-                score += piece.getScore(pos);
-            } else {
-                score -= piece.getScore(pos);
-            }
+        long move = ai.getBestMove(currentPlayerColor == WHITE);
+        if (Long.bitCount(move) != 2) {
+            throw new IllegalStateException("Invalid move");
         }
-        return score;
+
+        Notation one = ALL_VALUES[(int) Long.highestOneBit(move)];
+        Notation two = ALL_VALUES[(int) Long.lowestOneBit(move)];
+        Move moveMade;
+        if (isFriendly(currentPlayerColor, one)) {
+            moveMade = new Move(one, two);
+        } else {
+            moveMade = new Move(two, one);
+        }
+        movePiece(moveMade);
     }
 
     /**

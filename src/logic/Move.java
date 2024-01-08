@@ -1,29 +1,22 @@
 package logic;
 
-public record Move(Notation start, Notation end, int value, MoveType moveType) implements Comparable<Move> {
+public record Move(Notation start, Notation end, MoveType moveType,
+                   Piece.PieceType promoteTo) implements Comparable<Move> {
 
     public enum MoveType {
         NORMAL, CASTLE, EN_PASSANT, PROMOTION
     }
 
-    public Move(int value) {
-        this(null, null, value, MoveType.NORMAL);
-    }
-
     public Move(Notation start, Notation end) {
-        this(start, end, 0, MoveType.NORMAL);
+        this(start, end, MoveType.NORMAL);
     }
 
     public Move(Notation start, Notation end, MoveType moveType) {
-        this(start, end, 0, moveType);
-    }
-
-    public Move(Move move, int value) {
-        this(move.start, move.end, value, move.moveType);
+        this(start, end, moveType, null);
     }
     @Override
     public int compareTo(Move o) {
-        return Integer.compare(value, o.value);
+        return Integer.compare(this.moveType.ordinal(), o.moveType.ordinal());
     }
 
     @Override

@@ -18,15 +18,16 @@ import logic.Notation;
 import logic.Piece;
 
 public class Game extends JFrame {
+    private final UIStatusBar uiStatusBar;
+    private final UIPopup uiPopup;
     private final UIBoard uiBoard;
     private final UIToolBar uiToolBar;
-
-    private final UIStatusBar uiStatusBar;
 
     private Game() {
         // Initialize final variables
         uiStatusBar = new UIStatusBar();
-        uiBoard = new UIBoard(uiStatusBar, new GridLayout(0, 9));
+        uiPopup = new UIPopup();
+        uiBoard = new UIBoard(uiStatusBar, uiPopup, new GridLayout(0, 9));
         uiToolBar = new UIToolBar(uiBoard);
         initializeUI();
     }
@@ -68,36 +69,44 @@ public class Game extends JFrame {
 
 class UIBoard extends JPanel {
     private final UIStatusBar uiStatusBar;
-
+    private final UIPopup uiPopup;
     private final Board logicBoard;
-
     private final JButton[][] squares;
-
     private Notation squareSelected;
-
     private Set<Move> currentGreenSquares;
 
     private static final class AIStatus {
-        boolean aiPlayer = true;
-        boolean aiPlayerTurn = false;
+
+        private boolean aiPlayer;
+        private Piece.PieceColor aiColor;
+
+        private AIStatus() {
+            aiPlayer = false;
+            aiColor = Math.random() > 0.5 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
+        }
+
+        private void resetAI() {
+            aiColor = Math.random() > 0.5 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
+        }
     }
 
-    private final AIStatus ai = new AIStatus();
-
+    private final AIStatus ai;
     private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
     private static final Color DARK_SQUARE = new Color(181, 136, 99);
 
-    UIBoard(UIStatusBar uiStatusBar, GridLayout gridLayout) {
+    UIBoard(UIStatusBar uiStatusBar, UIPopup uiPopup, GridLayout gridLayout) {
         super(gridLayout);
         this.uiStatusBar = uiStatusBar;
-        logicBoard = new Board();
-        squares = new JButton[8][8];
-        currentGreenSquares = null;
+        this.uiPopup = uiPopup;
+        this.logicBoard = new Board();
+        this.squares = new JButton[8][8];
+        this.ai = new AIStatus();
         initializeBoard();
     }
 
     private void initializeBoard() {
         squareSelected = null;
+        currentGreenSquares = null;
 
         for (int i = 7; i >= 0; --i) {
             for (int j = -1; j < 8; ++j) {
@@ -124,40 +133,42 @@ class UIBoard extends JPanel {
                     SwingConstants.CENTER));
         }
 
-        uiStatusBar.setStatus("Initialized");
+        uiStatusBar.setStatus("Initialized board");
     }
 
     void resetGame() {
-        System.out.println("New Game");
         uiStatusBar.setStatus("New Game");
         logicBoard.resetBoard();
+        ai.resetAI();
         updateBoard();
     }
 
     void resignGame() {
-        System.out.println("Resign");
+        uiStatusBar.setStatus(logicBoard.currentPlayerColor + " Resign");
+        resetGame();
     }
 
     void drawGame() {
-        System.out.println("Draw");
+        uiStatusBar.setStatus(logicBoard.currentPlayerColor + " Draw");
+        resetGame();
     }
 
     void exitGame() {
-        System.out.println("Exit");
         uiStatusBar.setStatus("Exiting...");
         System.exit(0);
     }
 
     void toggleAI() {
         ai.aiPlayer = !ai.aiPlayer;
-        uiStatusBar.setStatus("AI Player " + (ai.aiPlayer ? "enabled" : "disabled") + ".");
+        uiStatusBar.setStatus(String.format("AI Player %s with color=%s", ai.aiPlayer ?
+                "enabled" : "disabled", ai.aiColor));
     }
 
     /**
      * Updates the graphical board
      */
     private void updateBoard() {
-        System.out.println("Update");
+        uiStatusBar.setStatus("Updating...");
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 squares[i][j].setText(Objects.requireNonNullElse(logicBoard.getPiece(i, j), "").toString());
@@ -165,23 +176,24 @@ class UIBoard extends JPanel {
         }
         uiStatusBar.setStatus((logicBoard.getTurn() % 2 == 1 ? "White" : "Black") + "'s turn");
 
-        if (ai.aiPlayer && ai.aiPlayerTurn) {
+        if (ai.aiPlayer && logicBoard.currentPlayerColor == ai.aiColor) {
             logicBoard.aiMove();
-            ai.aiPlayerTurn = false;
             updateBoard();
         }
     }
 
     private void manageClick(Notation notation) {
         if (squareSelected == null && logicBoard.getPiece(notation) != null) {
+            // Show possible moving squares
             squareSelected = notation;
             currentGreenSquares =
-                    logicBoard.getPiecePossibleMoves(notation);
+                    logicBoard.getPieceLegalMoves(notation);
             for (Move m : currentGreenSquares) {
                 byte[] pos = m.end().getPosition();
                 squares[pos[0]][pos[1]].setBackground(Color.GREEN);
             }
         } else {
+            // Finalize move
             if (currentGreenSquares != null) {
                 for (Move m : currentGreenSquares) {
                     byte[] pos = m.end().getPosition();
@@ -190,19 +202,23 @@ class UIBoard extends JPanel {
                 }
                 Move selected = currentGreenSquares.stream().filter(m -> m.end().equals(notation)).findFirst().orElse(null);
                 if (selected != null) {
-                    System.out.println("Move " + selected);
+                    uiStatusBar.setStatus("Move " + selected);
                     try {
-                        Piece captured = logicBoard.movePiece(selected);
-                        if (ai.aiPlayer) {
-                            ai.aiPlayerTurn = true;
+                        // Promotion
+                        uiPopup.show(this, 0, 0);
+                        if (selected.moveType() == Move.MoveType.PROMOTION) {
+                            selected = new Move(selected.start(), selected.end(),
+                                    selected.moveType(), Piece.PieceType.QUEEN);
                         }
+
+                        Piece captured = logicBoard.movePiece(selected);
+                        System.out.println("Captured: " + captured);
                         boolean gameOver = switch (logicBoard.gameStatus()) {
                             case 2, 3:
                                 yield true;
                             default:
                                 yield false;
                         };
-                        System.out.println("Captured: " + captured);
                         if (gameOver) {
                             uiStatusBar.setStatus("Game Over");
                             // Causes IllegalStateException for thread not owner
@@ -257,7 +273,7 @@ class UIToolBar extends JToolBar {
         addButtonToToolbar(this, "Exit", e -> uiBoard.exitGame());
         addSeparator();
         addButtonToToolbar(this, "AI", e -> this.toggleAI());
-        this.buttons.get("AI").setBackground(Color.GREEN);
+        this.buttons.get("AI").setBackground(Color.RED);
     }
 
     private void addButtonToToolbar(final JToolBar toolBar, final String buttonText,
@@ -288,6 +304,11 @@ class UIStatusBar extends JLabel {
     }
 
     void setStatus(String status) {
+        System.out.println(status);
         setText(status);
     }
+}
+
+class UIPopup extends JPopupMenu {
+
 }

@@ -1,25 +1,27 @@
 package logic;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static logic.Piece.PieceColor.*;
 
 public record Piece(PieceColor C, PieceType T, Board board, State state) {
-    enum PieceType {
+    public enum PieceType {
         PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING
     }
 
 
-    enum PieceColor {
-        WHITE, BLACK
+    public enum PieceColor {
+        WHITE, BLACK;
+
+        public static PieceColor opposite(PieceColor color) {
+            return color == WHITE ? BLACK : WHITE;
+        }
     }
 
     /**
      * Mutable state of the piece
      */
     private static class State {
-
         private final List<Integer> turns;
 
         State() {
@@ -43,10 +45,6 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         this(C, T, board, new State());
     }
 
-    Piece copy(Board newBoard) {
-        return new Piece(C, T, newBoard, this.state.copy());
-    }
-
     void moved(int turn) {
         if (state.turns.stream().anyMatch(i -> i >= turn)) {
             throw new IllegalStateException("Piece has already moved in the future?");
@@ -61,22 +59,6 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
 
     PieceType getType() {
         return T;
-    }
-
-    /**
-     * Returns the bit representation of this piece
-     *
-     * @return bit representation
-     */
-    public int getBitRepresentation() {
-        return switch (T) {
-            case PAWN -> C == WHITE ? 0b0001 : 0b1001;
-            case ROOK -> C == WHITE ? 0b0010 : 0b1010;
-            case KNIGHT -> C == WHITE ? 0b0011 : 0b1011;
-            case BISHOP -> C == WHITE ? 0b0100 : 0b1100;
-            case QUEEN -> C == WHITE ? 0b0101 : 0b1101;
-            case KING -> C == WHITE ? 0b0110 : 0b1110;
-        };
     }
 
 
@@ -152,7 +134,6 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
             int newColumn = posArr[1] - 1;
             if (newColumn >= 0 && board.isEnemy(piece.C, Notation.get(posArr[0], newColumn))) {
                 Piece enemyPiece = board.getPiece(posArr[0], newColumn);
-                // TODO: Fix en passant
                 boolean canEnPassant =
                         enemyPiece.T == PieceType.PAWN && enemyPiece.state.turns.size() == 1 && enemyPiece.state.turns.get(0) == board.getTurn() - 1;
                 if (canEnPassant) {
@@ -165,7 +146,6 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
             newColumn = posArr[1] + 1;
             if (newColumn < 8 && board.isEnemy(piece.C, Notation.get(posArr[0], newColumn))) {
                 Piece enemyPiece = board.getPiece(posArr[0], newColumn);
-                // TODO: Fix en passant
                 boolean canEnPassant =
                         enemyPiece.T == PieceType.PAWN && enemyPiece.state.turns.size() == 1 && enemyPiece.state.turns.get(0) == board.getTurn() - 1;
                 if (canEnPassant) {
@@ -388,12 +368,14 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
 
         Piece leftRook = board.getPiece(posArr[0], 0);
         if (leftRook != null && leftRook.T == PieceType.ROOK && leftRook.state.turns.isEmpty()) {
-            if (board.inCheck(piece.C == WHITE)) {
+            if (!board.safeSquare(piece.C, null, pos)) {
                 return false;
             }
+
             for (int j = 2; j < posArr[1]; ++j) {
                 Notation notation = Notation.get(posArr[0], j);
-                if (!board.isFree(notation) || dangerousSquare(board, piece, notation)) {
+                if (!board.isFree(notation) || !board.safeSquare(piece.C,
+                        new Move(pos, notation), notation)) {
                     return false;
                 }
             }
@@ -408,12 +390,14 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
 
         Piece rightRook = board.getPiece(posArr[0], 7);
         if (rightRook != null && rightRook.T == PieceType.ROOK && rightRook.state.turns.isEmpty()) {
-            if (board.inCheck(piece.C == WHITE)) {
+            if (!board.safeSquare(piece.C, null, pos)) {
                 return false;
             }
+
             for (int j = posArr[1] + 1; j < 7; ++j) {
                 Notation notation = Notation.get(posArr[0], j);
-                if (!board.isFree(notation) || dangerousSquare(board, piece, notation)) {
+                if (!board.isFree(notation) || !board.safeSquare(piece.C, new Move(pos, notation),
+                        notation)) {
                     return false;
                 }
             }
@@ -421,52 +405,6 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         }
 
         return false;
-    }
-
-    /**
-     * Returns whether the square is safe for the king
-     *
-     * @param pos position of the square to check
-     * @return whether the square is safe for the king
-     */
-    private static boolean dangerousSquare(Board board, Piece piece, Notation pos) {
-        byte[] posArr = pos.getPosition();
-
-        return Arrays.stream(Notation.ALL_VALUES).filter(notation -> board.isEnemy(piece.C,
-                notation)).anyMatch(enemyPos -> {
-            Piece enemyPiece = board.getPiece(enemyPos);
-            byte[] enemyPosArr = enemyPos.getPosition();
-
-            return switch (enemyPiece.getType()) {
-                case PAWN -> {
-                    int direction = piece.getColor() == WHITE ? 1 : -1;
-                    int columnDiff = posArr[1] - enemyPosArr[1];
-                    yield posArr[0] == enemyPosArr[0] + direction && (columnDiff == 1 || columnDiff == -1);
-                }
-                case KING ->
-                        Math.abs(posArr[0] - enemyPosArr[0]) <= 1 && Math.abs(posArr[1] - enemyPosArr[1]) <= 1;
-                default -> enemyPiece.possibleMoves(enemyPos).
-                        stream().map(Move::end).collect(Collectors.toSet()).contains(pos);
-            };
-        });
-    }
-
-    int getScore(Notation pos) {
-        int positionalValue = getPositionalValue(this.T, this.C, pos);
-        int materialValue = switch (T) {
-            case PAWN -> 1;
-            case KNIGHT, BISHOP -> 3;
-            case ROOK -> 5;
-            case QUEEN -> 9;
-            case KING -> 100;
-        };
-        int gameValue = switch (board.gameStatus()) {
-            case 0, 1 -> 0;
-            case 2 -> -200;
-            case 3 -> -100_000;
-            default -> throw new IllegalStateException("Unexpected value: " + board.gameStatus());
-        };
-        return positionalValue * materialValue + gameValue;
     }
 
     /**
@@ -482,108 +420,6 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
             case BISHOP -> C == WHITE ? '♗' : '♝';
             case QUEEN -> C == WHITE ? '♕' : '♛';
             case KING -> C == WHITE ? '♔' : '♚';
-        };
-    }
-
-
-    /**
-     * Returns the piece represented by the bit representation
-     *
-     * @param bitRepresentation the bit representation specified in Piece class
-     * @return unicode character
-     */
-    public static char getPiece(int bitRepresentation) {
-        boolean isWhite = (bitRepresentation & 0b1000) == 0;
-        return switch (bitRepresentation) {
-            case 0b0001, 0b1001 -> isWhite ? '♙' : '♟';
-            case 0b0010, 0b1010 -> isWhite ? '♖' : '♜';
-            case 0b0011, 0b1011 -> isWhite ? '♘' : '♞';
-            case 0b0100, 0b1100 -> isWhite ? '♗' : '♝';
-            case 0b0101, 0b1101 -> isWhite ? '♕' : '♛';
-            case 0b0110, 0b1110 -> isWhite ? '♔' : '♚';
-            default ->
-                    throw new IllegalArgumentException("Invalid bit representation: " + Integer.toBinaryString(bitRepresentation));
-        };
-    }
-
-    /**
-     * Returns the positional value of the piece with respect to the board from white's POV
-     * <br>Inspired by
-     * <a href="https://github.com/bartekspitza/sophia/blob/master/src/evaluation.c">GitHub</a>
-     */
-    private static final int[][] PAWN_VALUES = {
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {50, 50, 50, 50, 50, 50, 50, 50},
-            {10, 10, 20, 30, 30, 20, 10, 10},
-            {5, 5, 10, 25, 25, 10, 5, 5},
-            {0, 0, 0, 20, 20, 0, 0, 0},
-            {5, -5, -10, 0, 0, -10, -5, 5},
-            {5, 10, 10, -20, -20, 10, 10, 5},
-            {0, 0, 0, 0, 0, 0, 0, 0}
-    };
-
-    private static final int[][] KNIGHT_VALUES = {
-            {-50, -40, -30, -30, -30, -30, -40, -50},
-            {-40, -20, 0, 0, 0, 0, -20, -40},
-            {-30, 0, 10, 15, 15, 10, 0, -30},
-            {-30, 5, 15, 20, 20, 15, 5, -30},
-            {-30, 0, 15, 20, 20, 15, 0, -30},
-            {-30, 5, 10, 15, 15, 10, 5, -30},
-            {-40, -20, 0, 5, 5, 0, -20, -40},
-            {-50, -40, -30, -30, -30, -30, -40, -50}
-    };
-
-    private static final int[][] BISHOP_VALUES = {
-            {-20, -10, -10, -10, -10, -10, -10, -20},
-            {-10, 0, 0, 0, 0, 0, 0, -10},
-            {-10, 0, 5, 10, 10, 5, 0, -10},
-            {-10, 5, 5, 10, 10, 5, 5, -10},
-            {-10, 0, 10, 10, 10, 10, 0, -10},
-            {-10, 10, 10, 10, 10, 10, 10, -10},
-            {-10, 5, 0, 0, 0, 0, 5, -10},
-            {-20, -10, -10, -10, -10, -10, -10, -20}};
-
-    private static final int[][] ROOK_VALUES = {
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {5, 10, 10, 10, 10, 10, 10, 5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {0, 0, 0, 5, 5, 0, 0, 0}};
-    private static final int[][] QUEEN_VALUES = {
-            {-20, -10, -10, -5, -5, -10, -10, -20},
-            {-10, 0, 0, 0, 0, 0, 0, -10},
-            {-10, 0, 5, 5, 5, 5, 0, -10},
-            {-5, 0, 5, 5, 5, 5, 0, -5},
-            {0, 0, 5, 5, 5, 5, 0, -5},
-            {-10, 5, 5, 5, 5, 5, 0, -10},
-            {-10, 0, 5, 0, 0, 0, 0, -10},
-            {-20, -10, -10, -5, -5, -10, -10, -20}};
-    private static final int[][] KING_VALUES = {
-            {20, 30, 10, 0, 0, 10, 30, 20},
-            {20, 20, 0, 0, 0, 0, 20, 20},
-            {-10, -20, -20, -20, -20, -20, -20, -10},
-            {-20, -30, -30, -40, -40, -30, -30, -20},
-            {-30, -40, -40, -50, -50, -40, -40, -30},
-            {-30, -40, -40, -50, -50, -40, -40, -30},
-            {-30, -40, -40, -50, -50, -40, -40, -30},
-            {-30, -40, -40, -50, -50, -40, -40, -30}};
-
-    private static int getPositionalValue(PieceType type, PieceColor color, Notation pos) {
-        byte[] posArr = pos.getPosition();
-        int row = switch (color) {
-            case WHITE -> posArr[0];
-            case BLACK -> 7 - posArr[0];
-        };
-        return switch (type) {
-            case PAWN -> PAWN_VALUES[row][posArr[1]];
-            case KNIGHT -> KNIGHT_VALUES[row][posArr[1]];
-            case BISHOP -> BISHOP_VALUES[row][posArr[1]];
-            case ROOK -> ROOK_VALUES[row][posArr[1]];
-            case QUEEN -> QUEEN_VALUES[row][posArr[1]];
-            case KING -> KING_VALUES[row][posArr[1]];
         };
     }
 
