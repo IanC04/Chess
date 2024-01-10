@@ -29,14 +29,11 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         }
 
         State(List<Integer> turns) {
-            // TODO: Check if fine since integers are immutable
             this.turns = new ArrayList<>(turns);
         }
 
         State copy() {
-            State state = new State(this.turns);
-            System.out.println(state.turns);
-            return state;
+            return new State(this.turns);
         }
 
         private void addMove(int turn) {
@@ -143,6 +140,10 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
                 Piece enemyPiece = board.getPiece(posArr[0], newColumn);
                 boolean canEnPassant =
                         enemyPiece.T == PieceType.PAWN && enemyPiece.state.turns.size() == 1 && enemyPiece.state.turns.get(0) == board.getTurn() - 1;
+                if (canEnPassant && board.isEnemy(piece.C, Notation.get(posArr[0] + direction,
+                        newColumn))) {
+                    throw new IllegalStateException("Piece moved through other piece?");
+                }
                 if (canEnPassant) {
                     Move move = new Move(pos, Notation.get(posArr[0] + direction, newColumn),
                             Move.MoveType.EN_PASSANT);
