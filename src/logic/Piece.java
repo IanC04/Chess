@@ -140,11 +140,12 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
                 Piece enemyPiece = board.getPiece(posArr[0], newColumn);
                 boolean canEnPassant =
                         enemyPiece.T == PieceType.PAWN && enemyPiece.state.turns.size() == 1 && enemyPiece.state.turns.get(0) == board.getTurn() - 1;
-                if (canEnPassant && board.isEnemy(piece.C, Notation.get(posArr[0] + direction,
-                        newColumn))) {
-                    throw new IllegalStateException("Piece moved through other piece?");
-                }
                 if (canEnPassant) {
+                    if (board.isEnemy(piece.C, Notation.get(posArr[0] + direction,
+                            newColumn))) {
+                        throw new IllegalStateException("Enemy pawn moved through another enemy " +
+                                "piece");
+                    }
                     Move move = new Move(pos, Notation.get(posArr[0] + direction, newColumn),
                             Move.MoveType.EN_PASSANT);
                     moves.add(move);
@@ -212,7 +213,6 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
     }
 
     /**
-     *
      * @return if the piece can continue adding squares
      */
     private boolean addSlidingSquare(Board board, Piece piece, Notation initial, Notation pos,
