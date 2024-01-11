@@ -134,8 +134,7 @@ public class Board {
         // White goes first
         this.currentPlayerColor = WHITE;
         this.turn = 1;
-        // TODO: Unsure if 1 or 0
-        this.lastHalfMove = 1;
+        this.lastHalfMove = 0;
         this.whiteStatus.reset();
         this.blackStatus.reset();
         generateAllLegalMoves(this.whiteStatus);
@@ -584,10 +583,9 @@ public class Board {
             fen.append(" -");
         }
         // Half-move clock
-        fen.append(' ').append(turn - lastHalfMove);
+        fen.append(' ').append(turn - lastHalfMove - 1);
         // Full-move number
-        // TODO: Check if correct
-        fen.append(' ').append(turn / 2);
+        fen.append(' ').append((turn + 1) / 2);
         return fen.toString();
     }
 
@@ -597,20 +595,37 @@ public class Board {
         if (FEN.isBlank()) {
             throw new IllegalStateException("Invalid FEN");
         }
-        long move = ai.getBestMove(FEN);
-        if (Long.bitCount(move) != 2) {
+        String move = ai.getBestMove(FEN);
+        System.out.println("AI move: " + move);
+        if (move == null || move.isBlank()) {
             throw new IllegalStateException("Invalid move");
         }
+        Notation start = Notation.valueOf(move.substring(0, 2).toUpperCase());
+        Notation destination = Notation.valueOf(move.substring(2, 4).toUpperCase());
+        Piece originalPiece = getPiece(start);
 
-        Notation one = ALL_VALUES[(int) Long.highestOneBit(move)];
-        Notation two = ALL_VALUES[(int) Long.lowestOneBit(move)];
-        Move moveMade;
-        if (isFriendly(currentPlayerColor, one)) {
-            moveMade = new Move(one, two);
-        } else {
-            moveMade = new Move(two, one);
+        // En passant
+        if (originalPiece.T() == PAWN && destination.equals(Notation.get(start.getPosition()[0] + (originalPiece.C() == WHITE ? 1 : -1),
+                destination.getPosition()[1]))) {
+            movePiece(new Move(start, destination, Move.MoveType.EN_PASSANT));
         }
-        movePiece(moveMade);
+        // Promotion
+        else if (originalPiece.T() == PAWN && destination.getPosition()[0] == (originalPiece.C() == WHITE ? 7 : 0)) {
+            movePiece(new Move(start, destination, Move.MoveType.PROMOTION,
+                    switch (Character.toUpperCase(move.charAt(5))) {
+                        case 'Q' -> QUEEN;
+                        case 'R' -> ROOK;
+                        case 'B' -> BISHOP;
+                        case 'N' -> KNIGHT;
+                        default -> throw new IllegalStateException("Invalid promotion");
+                    }));
+        }
+        // Castle
+        else if (originalPiece.T() == KING && Math.abs(start.getPosition()[1] - destination.getPosition()[1]) == 2) {
+            movePiece(new Move(start, destination, Move.MoveType.CASTLE));
+        } else {
+            movePiece(new Move(start, destination, Move.MoveType.NORMAL));
+        }
     }
 
     /**

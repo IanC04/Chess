@@ -180,7 +180,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         // Check squares to the right
         for (int i = posArr[1] + 1; i < 8; ++i) {
             Notation square = Notation.get(posArr[0], i);
-            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
+            if (piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
@@ -188,7 +188,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         // Check squares to the left
         for (int i = posArr[1] - 1; i >= 0; --i) {
             Notation square = Notation.get(posArr[0], i);
-            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
+            if (piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
@@ -196,7 +196,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         // Check squares above
         for (int i = posArr[0] + 1; i < 8; ++i) {
             Notation square = Notation.get(i, posArr[1]);
-            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
+            if (piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
@@ -204,7 +204,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         // Check squares below
         for (int i = posArr[0] - 1; i >= 0; --i) {
             Notation square = Notation.get(i, posArr[1]);
-            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
+            if (piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
@@ -213,16 +213,16 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
     }
 
     /**
-     * @return if the piece can continue adding squares
+     * @return if the piece is done adding squares
      */
     private boolean addSlidingSquare(Board board, Piece piece, Notation initial, Notation pos,
                                      Set<Move> moveSet) {
         if (board.isFriendly(piece.C, pos)) {
-            return false;
+            return true;
         }
         Move move = new Move(initial, pos);
         moveSet.add(move);
-        return !board.isEnemy(piece.C, pos);
+        return board.isEnemy(piece.C, pos);
     }
 
     /**
@@ -267,7 +267,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
                 break;
             }
             Notation square = Notation.get(posArr[0] + i, posArr[1] + i);
-            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
+            if (piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
@@ -278,7 +278,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
                 break;
             }
             Notation square = Notation.get(posArr[0] - i, posArr[1] + i);
-            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
+            if (piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
@@ -289,7 +289,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
                 break;
             }
             Notation square = Notation.get(posArr[0] - i, posArr[1] - i);
-            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
+            if (piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }
@@ -300,7 +300,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
                 break;
             }
             Notation square = Notation.get(posArr[0] + i, posArr[1] - i);
-            if (!piece.addSlidingSquare(board, piece, pos, square, moves)) {
+            if (piece.addSlidingSquare(board, piece, pos, square, moves)) {
                 break;
             }
         }

@@ -79,11 +79,11 @@ class UIBoard extends JPanel {
 
         private AIStatus() {
             aiPlayer = false;
-            aiColor = Math.random() > 0.5 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
+            resetAI();
         }
 
         private void resetAI() {
-            aiColor = Math.random() > 0.5 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
+            aiColor = Math.random() >= 0.5 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
         }
     }
 
