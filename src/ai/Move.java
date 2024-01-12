@@ -1,9 +1,14 @@
 package ai;
 
-record Move(byte start, byte end, MoveType moveType, int value) {
+import static ai.BitBoards.*;
+
+record Move(int start, int end, MoveType moveType, int value, boolean valid) {
     enum MoveType {
         ERROR, NORMAL, CASTLE, PAWN_DOUBLE, EN_PASSANT, PROMOTE_ROOK, PROMOTE_KNIGHT,
-        PROMOTE_BISHOP, PROMOTE_QUEEN
+        PROMOTE_BISHOP, PROMOTE_QUEEN;
+
+        static final MoveType[] PROMOTION_TYPES = {PROMOTE_ROOK, PROMOTE_KNIGHT, PROMOTE_BISHOP,
+                PROMOTE_QUEEN};
     }
 
     private static final String[] SQUARE_NAMES;
@@ -22,27 +27,48 @@ record Move(byte start, byte end, MoveType moveType, int value) {
     }
 
     Move() {
-        this((byte) -1, (byte) -1, MoveType.ERROR, Integer.MIN_VALUE);
+        this(-1, -1, MoveType.ERROR, Integer.MIN_VALUE, false);
     }
 
     Move(String start, String end, int value) {
-        this(notationToIndex(start), notationToIndex(end), MoveType.NORMAL, value);
+        this(notationToIndex(start), notationToIndex(end), MoveType.NORMAL, value, true);
     }
 
-    static byte notationToIndex(String pos) {
+    Move(int start, int end, MoveType moveType) {
+        this(start, end, moveType, Integer.MIN_VALUE, true);
+    }
+
+    Move(int start, int end, MoveType moveType, int value) {
+        this(start, end, moveType, value, true);
+    }
+
+    static int notationToIndex(String pos) {
         if (pos.length() != 2 || !Character.isLetter(pos.charAt(0)) || !Character.isDigit(pos.charAt(1))) {
             throw new IllegalArgumentException("Invalid position: " + pos);
         }
-        return (byte) (Character.toLowerCase(pos.charAt(0)) - 'a' + 8 * (pos.charAt(1) - '1'));
+        return (Character.toLowerCase(pos.charAt(0)) - 'a') + (8 * (pos.charAt(1) - '1'));
     }
 
-    static String indexToNotation(byte index) {
+    static String indexToNotation(int index) {
         return SQUARE_NAMES[index];
+    }
+
+    static boolean validate(BitBoards state, Move move) {
+        if (move.start < A1 || move.start > H8 || move.end < A1 || move.end > H8) {
+            throw new IllegalArgumentException("Invalid move: " + move);
+        }
+
+        if (move.moveType == MoveType.CASTLE) {
+
+        }
+
+        return true;
     }
 
     @Override
     public String toString() {
-        return indexToNotation(start()) + indexToNotation(end()) + " " + switch (moveType()) {
+        return indexToNotation(start) + indexToNotation(end) + " " + switch (moveType) {
+            case ERROR -> "ERROR";
             case NORMAL -> "N";
             case CASTLE -> "C";
             case PAWN_DOUBLE -> "D";
@@ -51,7 +77,6 @@ record Move(byte start, byte end, MoveType moveType, int value) {
             case PROMOTE_KNIGHT -> "K";
             case PROMOTE_BISHOP -> "B";
             case PROMOTE_QUEEN -> "Q";
-            default -> "E";
         };
     }
 }

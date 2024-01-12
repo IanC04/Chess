@@ -6,7 +6,7 @@ class BitBoards {
      * <br>Inspired by
      * <a href="https://github.com/bartekspitza/sophia/blob/master/src/evaluation.c">GitHub</a>
      */
-    private static final int[][] WHITE_PAWN_VALUES = {
+    static final int[][] WHITE_PAWN_VALUES = {
             {0, 0, 0, 0, 0, 0, 0, 0},
             {50, 50, 50, 50, 50, 50, 50, 50},
             {10, 10, 20, 30, 30, 20, 10, 10},
@@ -16,8 +16,7 @@ class BitBoards {
             {5, 10, 10, -20, -20, 10, 10, 5},
             {0, 0, 0, 0, 0, 0, 0, 0}
     };
-
-    private static final int[][] WHITE_KNIGHT_VALUES = {
+    static final int[][] WHITE_KNIGHT_VALUES = {
             {-50, -40, -30, -30, -30, -30, -40, -50},
             {-40, -20, 0, 0, 0, 0, -20, -40},
             {-30, 0, 10, 15, 15, 10, 0, -30},
@@ -27,8 +26,7 @@ class BitBoards {
             {-40, -20, 0, 5, 5, 0, -20, -40},
             {-50, -40, -30, -30, -30, -30, -40, -50}
     };
-
-    private static final int[][] WHITE_BISHOP_VALUES = {
+    static final int[][] WHITE_BISHOP_VALUES = {
             {-20, -10, -10, -10, -10, -10, -10, -20},
             {-10, 0, 0, 0, 0, 0, 0, -10},
             {-10, 0, 5, 10, 10, 5, 0, -10},
@@ -37,8 +35,7 @@ class BitBoards {
             {-10, 10, 10, 10, 10, 10, 10, -10},
             {-10, 5, 0, 0, 0, 0, 5, -10},
             {-20, -10, -10, -10, -10, -10, -10, -20}};
-
-    private static final int[][] WHITE_ROOK_VALUES = {
+    static final int[][] WHITE_ROOK_VALUES = {
             {0, 0, 0, 0, 0, 0, 0, 0},
             {5, 10, 10, 10, 10, 10, 10, 5},
             {-5, 0, 0, 0, 0, 0, 0, -5},
@@ -47,7 +44,7 @@ class BitBoards {
             {-5, 0, 0, 0, 0, 0, 0, -5},
             {-5, 0, 0, 0, 0, 0, 0, -5},
             {0, 0, 0, 5, 5, 0, 0, 0}};
-    private static final int[][] WHITE_QUEEN_VALUES = {
+    static final int[][] WHITE_QUEEN_VALUES = {
             {-20, -10, -10, -5, -5, -10, -10, -20},
             {-10, 0, 0, 0, 0, 0, 0, -10},
             {-10, 0, 5, 5, 5, 5, 0, -10},
@@ -56,7 +53,7 @@ class BitBoards {
             {-10, 5, 5, 5, 5, 5, 0, -10},
             {-10, 0, 5, 0, 0, 0, 0, -10},
             {-20, -10, -10, -5, -5, -10, -10, -20}};
-    private static final int[][] WHITE_KING_VALUES = {
+    static final int[][] WHITE_KING_VALUES = {
             {20, 30, 10, 0, 0, 10, 30, 20},
             {20, 20, 0, 0, 0, 0, 20, 20},
             {-10, -20, -20, -20, -20, -20, -20, -10},
@@ -65,15 +62,27 @@ class BitBoards {
             {-30, -40, -40, -50, -50, -40, -40, -30},
             {-30, -40, -40, -50, -50, -40, -40, -30},
             {-30, -40, -40, -50, -50, -40, -40, -30}};
-    private long whitePawns, whiteKnights, whiteBishops, whiteRooks, whiteQueens, whiteKing;
-    private long blackPawns, blackKnights, blackBishops, blackRooks, blackQueens, blackKing;
-    private long whitePieces, blackPieces;
-    private boolean whiteToMove;
-    private byte enPassant;
-    private int halfMoveClock;
-    private int moveCounter;
-    private byte castleRights;
-    boolean checkmate, stalemate;
+    static final long RANK_1 = 0xFFL, RANK_2 = 0xFF00L, RANK_3 = 0xFF0000L, RANK_4 = 0xFF000000L,
+            RANK_5 = 0xFF00000000L, RANK_6 = 0xFF0000000000L, RANK_7 = 0xFF000000000000L, RANK_8
+            = 0xFF00000000000000L, A1 = 0, H1 = 7, A8 = 56, H8 = 63;
+    static final long[] SQUARE_TO_BITBOARD = new long[64];
+
+    static {
+        long position = 1L;
+        for (int i = 0; i < 64; ++i) {
+            SQUARE_TO_BITBOARD[i] = position;
+            position <<= 1;
+        }
+    }
+
+    long whitePawns, whiteKnights, whiteBishops, whiteRooks, whiteQueens, whiteKing;
+    long blackPawns, blackKnights, blackBishops, blackRooks, blackQueens, blackKing;
+    long whitePieces, blackPieces, allPieces;
+    boolean whiteToMove;
+    int enPassantIndex;
+    int halfMoveClock;
+    int moveCounter;
+    int castleRights;
 
     /**
      * Initial bitboard and should only be called once each time the best move is requested
@@ -145,6 +154,7 @@ class BitBoards {
             }
             position -= 16;
         }
+        this.allPieces = whitePieces | blackPieces;
         this.whiteToMove = whiteToMove.equals("w");
         for (char c : castleRights.toCharArray()) {
             switch (c) {
@@ -162,39 +172,43 @@ class BitBoards {
                     break;
             }
         }
-        this.enPassant = enPassant.equals("-") ? -1 : Move.notationToIndex(enPassant);
+        this.enPassantIndex = enPassant.equals("-") ? -1 : Move.notationToIndex(enPassant);
         this.halfMoveClock = Integer.parseInt(halfMoveClock);
         this.moveCounter = Integer.parseInt(moveCounter);
     }
 
-    BitBoards(BitBoards old, Move move) {
-        this.whitePawns = old.whitePawns;
-        this.whiteKnights = old.whiteKnights;
-        this.whiteBishops = old.whiteBishops;
-        this.whiteRooks = old.whiteRooks;
-        this.whiteQueens = old.whiteQueens;
-        this.whiteKing = old.whiteKing;
-        this.blackPawns = old.blackPawns;
-        this.blackKnights = old.blackKnights;
-        this.blackBishops = old.blackBishops;
-        this.blackRooks = old.blackRooks;
-        this.blackQueens = old.blackQueens;
-        this.blackKing = old.blackKing;
-        this.whitePieces = old.whitePieces;
-        this.blackPieces = old.blackPieces;
-        this.whiteToMove = !old.whiteToMove;
-        this.enPassant = old.enPassant;
-        this.halfMoveClock = old.halfMoveClock;
-        this.moveCounter = old.moveCounter;
-        this.castleRights = old.castleRights;
-        this.checkmate = old.checkmate;
-        this.stalemate = old.stalemate;
-        // TODO: Make this more efficient
+    BitBoards(BitBoards state) {
+        this.whitePawns = state.whitePawns;
+        this.whiteKnights = state.whiteKnights;
+        this.whiteBishops = state.whiteBishops;
+        this.whiteRooks = state.whiteRooks;
+        this.whiteQueens = state.whiteQueens;
+        this.whiteKing = state.whiteKing;
+        this.blackPawns = state.blackPawns;
+        this.blackKnights = state.blackKnights;
+        this.blackBishops = state.blackBishops;
+        this.blackRooks = state.blackRooks;
+        this.blackQueens = state.blackQueens;
+        this.blackKing = state.blackKing;
+        this.whitePieces = state.whitePieces;
+        this.blackPieces = state.blackPieces;
+        this.allPieces = state.allPieces;
+        this.whiteToMove = state.whiteToMove;
+        this.enPassantIndex = state.enPassantIndex;
+        this.halfMoveClock = state.halfMoveClock;
+        this.moveCounter = state.moveCounter;
+        this.castleRights = state.castleRights;
     }
 
     BitBoards makeMove(Move move) {
-        return new BitBoards(this, move);
+        // TODO
+        return null;
     }
+
+    int evaluateBoard() {
+        return 0;
+    }
+
 
     @Override
     public String toString() {

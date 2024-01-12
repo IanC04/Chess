@@ -10,6 +10,9 @@ import java.util.Scanner;
 public class Minimax {
     private final HashMap<String, Move[]> OPENING_BOOK;
 
+    // TODO: Implement
+    private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
+
     public Minimax() {
         this.OPENING_BOOK = new HashMap<>();
         parseOpeningBook();
@@ -31,7 +34,6 @@ public class Minimax {
                         OPENING_BOOK.put(position, currentMoves.toArray(new Move[0]));
                         currentMoves.clear();
                     }
-                    System.out.println(line);
                     position = line.substring(4);
                     continue;
                 }
@@ -59,8 +61,9 @@ public class Minimax {
         if (openingMove != null) {
             return openingMove;
         }
-        Move bestMove = rootNegaMax(4, Integer.MIN_VALUE, Integer.MAX_VALUE,
-                new BitBoards(FEN));
+        BitBoards state = new BitBoards(FEN);
+        Move bestMove = rootNegaMax(state, 4, Integer.MIN_VALUE, Integer.MAX_VALUE,
+                state.whiteToMove);
         if (bestMove == null) {
             throw new IllegalStateException("No move found");
         }
@@ -99,15 +102,12 @@ public class Minimax {
      * @param beta  maximum score
      * @return the best move
      */
-    private Move rootNegaMax(int depth, int alpha, int beta, BitBoards state) {
+    private Move rootNegaMax(BitBoards state, int depth, int alpha, int beta, boolean color) {
         if (depth == 0) {
             return new Move();
         }
-        if (state.checkmate || state.stalemate) {
-            return new Move();
-        }
 
-        Move[] allMoves = MoveGeneration.generateMoves(state);
+        Move[] allMoves = MoveGeneration.generateOrderedMoves(state);
         if (allMoves == null || allMoves.length == 0) {
             return new Move();
         }
@@ -115,7 +115,7 @@ public class Minimax {
 
         for (Move move : allMoves) {
             System.out.println(move);
-            int score = -negaMax(depth - 1, -beta, -alpha, state.makeMove(move));
+            int score = -negaMax(state.makeMove(move), depth - 1, -beta, -alpha,!color);
             if (score > bestMove.value()) {
                 bestMove = new Move(move.start(), move.end(), move.moveType(), score);
             }
@@ -123,22 +123,19 @@ public class Minimax {
         return bestMove;
     }
 
-    private int negaMax(int depth, int alpha, int beta, BitBoards state) {
+    private int negaMax(BitBoards state, int depth, int alpha, int beta, boolean color) {
         if (depth == 0) {
-            return evaluateBoard();
-        }
-        if (state.checkmate || state.stalemate) {
-            return evaluateBoard();
+            return state.evaluateBoard();
         }
 
-        Move[] allMoves = MoveGeneration.generateMoves(state);
+        Move[] allMoves = MoveGeneration.generateOrderedMoves(state);
         if (allMoves == null || allMoves.length == 0) {
-            return evaluateBoard();
+            return state.evaluateBoard();
         }
 
         int bestValue = Integer.MIN_VALUE;
         for (Move move : allMoves) {
-            int value = -negaMax(depth - 1, -beta, -alpha, state.makeMove(move));
+            int value = -negaMax(state.makeMove(move), depth - 1, -beta, -alpha, !color);
             bestValue = Math.max(bestValue, value);
             alpha = Math.max(alpha, value);
             if (alpha >= beta) {
@@ -148,7 +145,4 @@ public class Minimax {
         return bestValue;
     }
 
-    private int evaluateBoard() {
-        return 0;
-    }
 }
