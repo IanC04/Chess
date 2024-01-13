@@ -107,15 +107,19 @@ public class Minimax {
             return new Move();
         }
 
-        Move[] allMoves = MoveGeneration.generateOrderedMoves(state);
-        if (allMoves == null || allMoves.length == 0) {
+        Move[] allMoves = MoveGeneration.generateMoves(state);
+        if (allMoves[0] == null) {
             return new Move();
         }
         Move bestMove = new Move();
 
         for (Move move : allMoves) {
+            if (move == null) {
+                break;
+            }
             System.out.println(move);
-            int score = -negaMax(state.makeMove(move), depth - 1, -beta, -alpha,!color);
+            BitBoards newState = state.makeMove(move);
+            int score = -negaMax(newState, depth - 1, -beta, -alpha, !color);
             if (score > bestMove.value()) {
                 bestMove = new Move(move.start(), move.end(), move.moveType(), score);
             }
@@ -128,13 +132,16 @@ public class Minimax {
             return state.evaluateBoard();
         }
 
-        Move[] allMoves = MoveGeneration.generateOrderedMoves(state);
-        if (allMoves == null || allMoves.length == 0) {
+        Move[] allMoves = MoveGeneration.generateMoves(state);
+        if (allMoves[0] == null) {
             return state.evaluateBoard();
         }
 
         int bestValue = Integer.MIN_VALUE;
         for (Move move : allMoves) {
+            if (move == null) {
+                break;
+            }
             int value = -negaMax(state.makeMove(move), depth - 1, -beta, -alpha, !color);
             bestValue = Math.max(bestValue, value);
             alpha = Math.max(alpha, value);

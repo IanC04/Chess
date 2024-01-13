@@ -64,7 +64,8 @@ class BitBoards {
             {-30, -40, -40, -50, -50, -40, -40, -30}};
     static final long RANK_1 = 0xFFL, RANK_2 = 0xFF00L, RANK_3 = 0xFF0000L, RANK_4 = 0xFF000000L,
             RANK_5 = 0xFF00000000L, RANK_6 = 0xFF0000000000L, RANK_7 = 0xFF000000000000L, RANK_8
-            = 0xFF00000000000000L, A1 = 0, H1 = 7, A8 = 56, H8 = 63;
+            = 0xFF00000000000000L, A1 = 0, H1 = 7, A2 = 8, A8 = 56, H8 = 63, A_FILE =
+            0x0101010101010101L, H_FILE = 0x8080808080808080L, WHITE_KING_START = 4, BLACK_KING_START = 60;
     static final long[] SQUARE_TO_BITBOARD = new long[64];
 
     static {
@@ -74,6 +75,148 @@ class BitBoards {
             position <<= 1;
         }
     }
+
+    // TODO: Precompute all possible moves since they will never change
+    static final long[] WHITE_PAWN_POSSIBLE_CAPTURES = new long[64], BLACK_PAWN_POSSIBLE_CAPTURES = new long[64];
+
+    static {
+        for (int i = (int) A2; i < A8; i++) {
+            long squarePossibleCaptures = 0L;
+            if (i % 8 != 0) {
+                squarePossibleCaptures |= SQUARE_TO_BITBOARD[i + 7];
+            }
+            if (i % 8 != 7) {
+                squarePossibleCaptures |= SQUARE_TO_BITBOARD[i + 9];
+            }
+            WHITE_PAWN_POSSIBLE_CAPTURES[i] = squarePossibleCaptures;
+        }
+
+        for (int i = (int) A2; i < A8; i++) {
+            long squarePossibleCaptures = 0L;
+            if (i % 8 != 0) {
+                squarePossibleCaptures |= SQUARE_TO_BITBOARD[i - 9];
+            }
+            if (i % 8 != 7) {
+                squarePossibleCaptures |= SQUARE_TO_BITBOARD[i - 7];
+            }
+            BLACK_PAWN_POSSIBLE_CAPTURES[i] = squarePossibleCaptures;
+        }
+    }
+
+    static final long[] KNIGHT_POSSIBLE_MOVES = new long[64];
+
+    static {
+        for (int i = (int) A1; i <= H8; i++) {
+            long squarePossibleMoves = 0L;
+            if (i % 8 < 6) {
+                if (i < 48) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i + 17];
+                }
+                if (i > 15) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i - 15];
+                }
+            }
+            if (i % 8 < 7) {
+                if (i < 40) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i + 10];
+                }
+                if (i > 23) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i - 6];
+                }
+            }
+            if (i % 8 > 0) {
+                if (i < 40) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i + 6];
+                }
+                if (i > 23) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i - 10];
+                }
+            }
+            if (i % 8 > 1) {
+                if (i < 48) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i + 15];
+                }
+                if (i > 15) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i - 17];
+                }
+            }
+            KNIGHT_POSSIBLE_MOVES[i] = squarePossibleMoves;
+        }
+    }
+
+    static final long[] ROOK_POSSIBLE_MOVES = new long[64], BISHOP_POSSIBLE_MOVES = new long[64];
+
+    static {
+        for (int i = 0; i <= H8; i++) {
+            long squarePossibleMoves = 0L;
+            for (int up = i + 8; up < 64; up += 8) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[up];
+            }
+            for (int down = i - 8; down >= 0; down -= 8) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[down];
+            }
+            for (int left = i - 1; left >= 0 && left % 8 != 7; left--) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[left];
+            }
+            for (int right = i + 1; right < 64 && right % 8 != 0; right++) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[right];
+            }
+            ROOK_POSSIBLE_MOVES[i] = squarePossibleMoves;
+        }
+
+        for (int i = 0; i <= H8; i++) {
+            long squarePossibleMoves = 0L;
+            for (int upLeft = i + 7; upLeft < 64 && upLeft % 8 != 0; upLeft += 7) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[upLeft];
+            }
+            for (int upRight = i + 9; upRight < 64 && upRight % 8 != 7; upRight += 9) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[upRight];
+            }
+            for (int downLeft = i - 9; downLeft >= 0 && downLeft % 8 != 0; downLeft -= 9) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[downLeft];
+            }
+            for (int downRight = i - 7; downRight >= 0 && downRight % 8 != 7; downRight -= 7) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[downRight];
+            }
+            BISHOP_POSSIBLE_MOVES[i] = squarePossibleMoves;
+        }
+    }
+
+    static final long[] KING_POSSIBLE_MOVES = new long[64];
+
+    static {
+        for (int i = 0; i <= H8; i++) {
+            long squarePossibleMoves = 0L;
+            if (i % 8 != 0) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[i - 1];
+                if (i < 56) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i + 7];
+                }
+                if (i > 7) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i - 9];
+                }
+            }
+            if (i % 8 != 7) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[i + 1];
+                if (i < 56) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i + 9];
+                }
+                if (i > 7) {
+                    squarePossibleMoves |= SQUARE_TO_BITBOARD[i - 7];
+                }
+            }
+            if (i < 56) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[i + 8];
+            }
+            if (i > 7) {
+                squarePossibleMoves |= SQUARE_TO_BITBOARD[i - 8];
+            }
+            KING_POSSIBLE_MOVES[i] = squarePossibleMoves;
+        }
+    }
+
+    // TODO: Precompute since will never change
+    static final long[] ROOK_MAGICS = new long[64], BISHOP_MAGICS = new long[64];
 
     long whitePawns, whiteKnights, whiteBishops, whiteRooks, whiteQueens, whiteKing;
     long blackPawns, blackKnights, blackBishops, blackRooks, blackQueens, blackKing;
@@ -177,7 +320,7 @@ class BitBoards {
         this.moveCounter = Integer.parseInt(moveCounter);
     }
 
-    BitBoards(BitBoards state) {
+    private BitBoards(BitBoards state) {
         this.whitePawns = state.whitePawns;
         this.whiteKnights = state.whiteKnights;
         this.whiteBishops = state.whiteBishops;
@@ -201,10 +344,72 @@ class BitBoards {
     }
 
     BitBoards makeMove(Move move) {
-        // TODO
-        return null;
+        BitBoards newState = switch (move.moveType()) {
+            case EN_PASSANT -> makeMoveEnPassant(move);
+            case CASTLE_LEFT -> makeMoveCastleLeft(move);
+            case CASTLE_RIGHT -> makeMoveCastleRight(move);
+            default -> makeMoveNormal(move);
+        };
+        newState.whiteToMove = !whiteToMove;
+        ++newState.moveCounter;
+
+        return newState;
     }
 
+    /**
+     * TODO: Implement
+     *
+     * @param move move to make
+     * @return new state
+     */
+    private BitBoards makeMoveEnPassant(Move move) {
+        BitBoards newState = new BitBoards(this);
+
+        return newState;
+    }
+
+    /**
+     * TODO: Implement
+     *
+     * @param move
+     * @return
+     */
+    private BitBoards makeMoveCastleLeft(Move move) {
+        BitBoards newState = new BitBoards(this);
+
+        return newState;
+    }
+
+    /**
+     * TODO: Implement
+     *
+     * @param move
+     * @return
+     */
+    private BitBoards makeMoveCastleRight(Move move) {
+        BitBoards newState = new BitBoards(this);
+
+        return newState;
+    }
+
+    /**
+     * TODO: Implement
+     *
+     * @param move
+     * @return
+     */
+    private BitBoards makeMoveNormal(Move move) {
+        // Set enPassantIndex if pawn double move
+        BitBoards newState = new BitBoards(this);
+
+        return newState;
+    }
+
+    /**
+     * TODO: Implement
+     *
+     * @return
+     */
     int evaluateBoard() {
         return 0;
     }

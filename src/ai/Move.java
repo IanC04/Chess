@@ -4,8 +4,8 @@ import static ai.BitBoards.*;
 
 record Move(int start, int end, MoveType moveType, int value, boolean valid) {
     enum MoveType {
-        ERROR, NORMAL, CASTLE, PAWN_DOUBLE, EN_PASSANT, PROMOTE_ROOK, PROMOTE_KNIGHT,
-        PROMOTE_BISHOP, PROMOTE_QUEEN;
+        ERROR, NORMAL, CASTLE_LEFT, CASTLE_RIGHT, PAWN_DOUBLE_MOVE, EN_PASSANT, PROMOTE_ROOK,
+        PROMOTE_KNIGHT, PROMOTE_BISHOP, PROMOTE_QUEEN;
 
         static final MoveType[] PROMOTION_TYPES = {PROMOTE_ROOK, PROMOTE_KNIGHT, PROMOTE_BISHOP,
                 PROMOTE_QUEEN};
@@ -58,7 +58,7 @@ record Move(int start, int end, MoveType moveType, int value, boolean valid) {
             throw new IllegalArgumentException("Invalid move: " + move);
         }
 
-        if (move.moveType == MoveType.CASTLE) {
+        if (move.moveType == MoveType.CASTLE_LEFT) {
 
         }
 
@@ -70,8 +70,9 @@ record Move(int start, int end, MoveType moveType, int value, boolean valid) {
         return indexToNotation(start) + indexToNotation(end) + " " + switch (moveType) {
             case ERROR -> "ERROR";
             case NORMAL -> "N";
-            case CASTLE -> "C";
-            case PAWN_DOUBLE -> "D";
+            case CASTLE_LEFT -> "CL";
+            case CASTLE_RIGHT -> "CR";
+            case PAWN_DOUBLE_MOVE -> "D";
             case EN_PASSANT -> "E";
             case PROMOTE_ROOK -> "R";
             case PROMOTE_KNIGHT -> "K";
