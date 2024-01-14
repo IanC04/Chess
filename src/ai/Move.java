@@ -68,7 +68,7 @@ record Move(int start, int end, MoveType moveType, PieceType pieceType, int valu
             // TODO
         }
         BitBoards tempState = state.makeMove(move);
-        if (tempState.safeIndex(state.whiteToMove, )) {
+        if (tempState.safeIndex(state.whiteToMove, state.whiteToMove ? tempState.whiteKing : tempState.blackKing)) {
             return false;
         }
         return true;
