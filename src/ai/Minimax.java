@@ -38,8 +38,10 @@ public class Minimax {
                     continue;
                 }
                 String[] args = line.split(" ");
-                Move move = new Move(args[0].substring(0, 2), args[0].substring(2),
-                        Integer.parseInt(args[1]));
+                int start = Move.notationToIndex(args[0].substring(0, 2));
+                int end = Move.notationToIndex(args[0].substring(2));
+                int value = Integer.parseInt(args[1]);
+                Move move = new Move(start, end, value);
                 currentMoves.add(move);
             }
         } catch (FileNotFoundException e) {
@@ -108,20 +110,14 @@ public class Minimax {
         }
 
         Move[] allMoves = MoveGeneration.generateMoves(state);
-        if (allMoves[0] == null) {
-            return new Move();
-        }
         Move bestMove = new Move();
-
         for (Move move : allMoves) {
-            if (move == null) {
-                break;
-            }
             System.out.println(move);
             BitBoards newState = state.makeMove(move);
             int score = -negaMax(newState, depth - 1, -beta, -alpha, !color);
             if (score > bestMove.value()) {
-                bestMove = new Move(move.start(), move.end(), move.moveType(), score);
+                bestMove = new Move(move.start(), move.end(), move.moveType(),
+                        move.pieceType(), score);
             }
         }
         return bestMove;
@@ -133,15 +129,8 @@ public class Minimax {
         }
 
         Move[] allMoves = MoveGeneration.generateMoves(state);
-        if (allMoves[0] == null) {
-            return state.evaluateBoard();
-        }
-
         int bestValue = Integer.MIN_VALUE;
         for (Move move : allMoves) {
-            if (move == null) {
-                break;
-            }
             int value = -negaMax(state.makeMove(move), depth - 1, -beta, -alpha, !color);
             bestValue = Math.max(bestValue, value);
             alpha = Math.max(alpha, value);

@@ -1,11 +1,14 @@
 package ai;
 
+import java.util.Arrays;
+
 import static ai.BitBoards.*;
+import static ai.Move.PieceType.*;
 
 public class MoveGeneration {
 
     /**
-     * Generate all possible moves for the current state
+     * Generate all valid moves for the current state
      * <a href="https://chess.stackexchange.com/questions/4490/maximum-possible-movement-in-a-turn">Max: 218</a>
      *
      * @param state current state
@@ -22,16 +25,17 @@ public class MoveGeneration {
         long friendlyKing = state.whiteToMove ? state.whiteKing : state.blackKing;
 
         index = generatePawnMoves(state, moves, index, friendlyPawns);
-        index = generateRookMoves(state, moves, index, friendlyRooks);
+        index = generateRookMoves(state, moves, index, friendlyRooks, false);
         index = generateKnightMoves(state, moves, index, friendlyKnights);
-        index = generateBishopMoves(state, moves, index, friendlyBishops);
+        index = generateBishopMoves(state, moves, index, friendlyBishops, false);
         index = generateQueenMoves(state, moves, index, friendlyQueens);
         index = generateKingMoves(state, moves, index, friendlyKing);
         if (index > 218) {
             throw new IllegalStateException("Invalid number of moves");
         }
 
-        return moves;
+        // Truncates array
+        return Arrays.copyOf(moves, index);
     }
 
     private static int generatePawnMoves(BitBoards state, Move[] moves, int index, long friendlyPawns) {
@@ -40,6 +44,10 @@ public class MoveGeneration {
 
         // Pawn single moves
         while (singleMove != 0) {
+            if (Long.bitCount(singleMove) > 8) {
+                throw new IllegalStateException("Invalid number of pawn double moves");
+            }
+
             int end = Long.numberOfTrailingZeros(singleMove);
             int start = state.whiteToMove ? end - 8 : end + 8;
             index = addPawnMove(moves, index, start, end, state.whiteToMove, false, state);
@@ -48,6 +56,10 @@ public class MoveGeneration {
 
         // Pawn double moves
         while (doubleMove != 0) {
+            if (Long.bitCount(doubleMove) > 8) {
+                throw new IllegalStateException("Invalid number of pawn double moves");
+            }
+
             int end = Long.numberOfTrailingZeros(doubleMove);
             int start = state.whiteToMove ? end - 16 : end + 16;
             index = addPawnMove(moves, index, start, end, state.whiteToMove, true, state);
@@ -56,17 +68,21 @@ public class MoveGeneration {
 
         // En passant
         if (state.enPassantIndex != -1) {
-            long enPassant = SQUARE_TO_BITBOARD[state.enPassant];
+            long enPassant;
             if (state.whiteToMove) {
-                enPassant <<= 8;
+                enPassant = BLACK_PAWN_POSSIBLE_CAPTURES[state.enPassantIndex];
             } else {
-                enPassant >>>= 8;
+                enPassant = WHITE_PAWN_POSSIBLE_CAPTURES[state.enPassantIndex];
             }
+            if (Long.bitCount(enPassant) > 2) {
+                throw new IllegalStateException("Invalid number of en passant moves");
+            }
+
             enPassant &= friendlyPawns;
             if (enPassant != 0) {
                 int start = Long.numberOfTrailingZeros(enPassant);
-                int end = state.whiteToMove ? state.enPassant - 8 : state.enPassant + 8;
-                Move move = new Move(start, end, Move.MoveType.EN_PASSANT);
+                int end = state.enPassantIndex;
+                Move move = new Move(start, end, Move.MoveType.EN_PASSANT, PAWN);
                 if (Move.validate(state, move)) {
                     moves[index++] = move;
                 }
@@ -99,14 +115,14 @@ public class MoveGeneration {
         boolean at_end = (white && (SQUARE_TO_BITBOARD[end] & RANK_8) != 0) || (!white && (SQUARE_TO_BITBOARD[end] & RANK_1) != 0);
         if (at_end) {
             for (Move.MoveType moveType : Move.MoveType.PROMOTION_TYPES) {
-                move = new Move(start, end, moveType);
+                move = new Move(start, end, moveType, PAWN);
                 if (Move.validate(state, move)) {
                     moves[index++] = move;
                 }
             }
         } else {
-            move = new Move(start, end,
-                    doubleMove ? Move.MoveType.PAWN_DOUBLE_MOVE : Move.MoveType.NORMAL);
+            move = new Move(start, end, doubleMove ? Move.MoveType.PAWN_DOUBLE_MOVE :
+                    Move.MoveType.NORMAL, PAWN);
             if (Move.validate(state, move)) {
                 moves[index++] = move;
             }
@@ -115,7 +131,8 @@ public class MoveGeneration {
         return index;
     }
 
-    private static int generateRookMoves(BitBoards state, Move[] moves, int index, long friendlyRooks) {
+    private static int generateRookMoves(BitBoards state, Move[] moves, int index,
+                                         long friendlyRooks, boolean fromQueen) {
         long friendlyPieces = state.whiteToMove ? state.whitePieces : state.blackPieces;
 
         while (friendlyRooks != 0) {
@@ -125,7 +142,7 @@ public class MoveGeneration {
             rookMoves &= ~friendlyPieces;
             while (rookMoves != 0) {
                 int end = Long.numberOfTrailingZeros(rookMoves);
-                Move move = new Move(start, end, Move.MoveType.NORMAL);
+                Move move = new Move(start, end, Move.MoveType.NORMAL, fromQueen ? QUEEN : ROOK);
                 if (Move.validate(state, move)) {
                     moves[index++] = move;
                 }
@@ -150,7 +167,7 @@ public class MoveGeneration {
             knightMoves &= ~friendlyPieces;
             while (knightMoves != 0) {
                 int end = Long.numberOfTrailingZeros(knightMoves);
-                Move move = new Move(start, end, Move.MoveType.NORMAL);
+                Move move = new Move(start, end, Move.MoveType.NORMAL, KNIGHT);
                 if (Move.validate(state, move)) {
                     moves[index++] = move;
                 }
@@ -162,7 +179,8 @@ public class MoveGeneration {
         return index;
     }
 
-    private static int generateBishopMoves(BitBoards state, Move[] moves, int index, long friendlyBishops) {
+    private static int generateBishopMoves(BitBoards state, Move[] moves, int index,
+                                           long friendlyBishops, boolean fromQueen) {
         long friendlyPieces = state.whiteToMove ? state.whitePieces : state.blackPieces;
 
         while (friendlyBishops != 0) {
@@ -172,7 +190,7 @@ public class MoveGeneration {
             bishopMoves &= ~friendlyPieces;
             while (bishopMoves != 0) {
                 int end = Long.numberOfTrailingZeros(bishopMoves);
-                Move move = new Move(start, end, Move.MoveType.NORMAL);
+                Move move = new Move(start, end, Move.MoveType.NORMAL, fromQueen ? QUEEN : BISHOP);
                 if (Move.validate(state, move)) {
                     moves[index++] = move;
                 }
@@ -185,8 +203,8 @@ public class MoveGeneration {
     }
 
     private static int generateQueenMoves(BitBoards state, Move[] moves, int index, long friendlyQueens) {
-        index = generateRookMoves(state, moves, index, friendlyQueens);
-        index = generateBishopMoves(state, moves, index, friendlyQueens);
+        index = generateRookMoves(state, moves, index, friendlyQueens, true);
+        index = generateBishopMoves(state, moves, index, friendlyQueens, true);
 
         return index;
     }
@@ -203,7 +221,7 @@ public class MoveGeneration {
         kingMoves &= ~friendlyPieces;
         while (kingMoves != 0) {
             int end = Long.numberOfTrailingZeros(kingMoves);
-            Move move = new Move(start, end, Move.MoveType.NORMAL);
+            Move move = new Move(start, end, Move.MoveType.NORMAL, KING);
             if (Move.validate(state, move)) {
                 moves[index++] = move;
             }

@@ -2,13 +2,18 @@ package ai;
 
 import static ai.BitBoards.*;
 
-record Move(int start, int end, MoveType moveType, int value, boolean valid) {
+record Move(int start, int end, MoveType moveType, PieceType pieceType, int value, boolean valid) {
     enum MoveType {
-        ERROR, NORMAL, CASTLE_LEFT, CASTLE_RIGHT, PAWN_DOUBLE_MOVE, EN_PASSANT, PROMOTE_ROOK,
+        ERROR, UNKNOWN, NORMAL, CASTLE_LEFT, CASTLE_RIGHT, PAWN_DOUBLE_MOVE, EN_PASSANT,
+        PROMOTE_ROOK,
         PROMOTE_KNIGHT, PROMOTE_BISHOP, PROMOTE_QUEEN;
 
         static final MoveType[] PROMOTION_TYPES = {PROMOTE_ROOK, PROMOTE_KNIGHT, PROMOTE_BISHOP,
                 PROMOTE_QUEEN};
+    }
+
+    enum PieceType {
+        ERROR, UNKNOWN, PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING
     }
 
     private static final String[] SQUARE_NAMES;
@@ -27,19 +32,19 @@ record Move(int start, int end, MoveType moveType, int value, boolean valid) {
     }
 
     Move() {
-        this(-1, -1, MoveType.ERROR, Integer.MIN_VALUE, false);
+        this(-1, -1, MoveType.ERROR, PieceType.ERROR, Integer.MIN_VALUE, false);
     }
 
-    Move(String start, String end, int value) {
-        this(notationToIndex(start), notationToIndex(end), MoveType.NORMAL, value, true);
+    Move(int start, int end, int value) {
+        this(start, end, MoveType.UNKNOWN, PieceType.UNKNOWN, value, true);
     }
 
-    Move(int start, int end, MoveType moveType) {
-        this(start, end, moveType, Integer.MIN_VALUE, true);
+    Move(int start, int end, MoveType moveType, PieceType pieceType) {
+        this(start, end, moveType, pieceType, Integer.MIN_VALUE, true);
     }
 
-    Move(int start, int end, MoveType moveType, int value) {
-        this(start, end, moveType, value, true);
+    Move(int start, int end, MoveType moveType, PieceType pieceType, int value) {
+        this(start, end, moveType, pieceType, value, true);
     }
 
     static int notationToIndex(String pos) {
@@ -57,18 +62,23 @@ record Move(int start, int end, MoveType moveType, int value, boolean valid) {
         if (move.start < A1 || move.start > H8 || move.end < A1 || move.end > H8) {
             throw new IllegalArgumentException("Invalid move: " + move);
         }
-
-        if (move.moveType == MoveType.CASTLE_LEFT) {
-
+        if (move.moveType() == MoveType.CASTLE_LEFT) {
+            // TODO
+        } else if (move.moveType() == MoveType.CASTLE_RIGHT) {
+            // TODO
         }
-
+        BitBoards tempState = state.makeMove(move);
+        if (tempState.safeIndex(state.whiteToMove, )) {
+            return false;
+        }
         return true;
     }
 
     @Override
     public String toString() {
         return indexToNotation(start) + indexToNotation(end) + " " + switch (moveType) {
-            case ERROR -> "ERROR";
+            case ERROR -> "ERR";
+            case UNKNOWN -> "U";
             case NORMAL -> "N";
             case CASTLE_LEFT -> "CL";
             case CASTLE_RIGHT -> "CR";
