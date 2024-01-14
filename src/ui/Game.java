@@ -10,6 +10,7 @@ import java.awt.event.*;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.swing.*;
 
 import logic.Board;
@@ -69,11 +70,22 @@ class UIBoard extends JPanel {
     private final UIStatusBar uiStatusBar;
     private final Board logicBoard;
     private final JButton[][] squares;
-    private Notation squareSelected;
-    private Set<Move> currentGreenSquares;
+
+    private static final class Selection {
+        private Piece currentlySelectedPiece;
+        private Notation squareSelected;
+        private Set<Move> currentGreenSquares;
+
+        void reset() {
+            currentlySelectedPiece = null;
+            squareSelected = null;
+            currentGreenSquares = null;
+        }
+    }
+
+    private final Selection selection;
 
     private static final class AIStatus {
-
         private boolean aiPlayer;
         private Piece.PieceColor aiColor;
 
@@ -99,13 +111,12 @@ class UIBoard extends JPanel {
         this.logicBoard = new Board();
         this.squares = new JButton[8][8];
         this.ai = new AIStatus();
+        this.selection = new Selection();
+        this.selection.reset();
         initializeBoard();
     }
 
     private void initializeBoard() {
-        squareSelected = null;
-        currentGreenSquares = null;
-
         for (int i = 7; i >= 0; --i) {
             for (int j = -1; j < 8; ++j) {
                 if (j == -1) {
@@ -183,75 +194,95 @@ class UIBoard extends JPanel {
 
     private void manageClick(Notation notation) {
         Piece selectedPiece = logicBoard.getPiece(notation);
-        if (squareSelected == null && selectedPiece != null && selectedPiece.C() == logicBoard.currentPlayerColor) {
-            // Show possible moving squares
-            squareSelected = notation;
-            currentGreenSquares =
-                    logicBoard.getPieceLegalMoves(notation);
-            for (Move m : currentGreenSquares) {
-                byte[] pos = m.end().getPosition();
-                squares[pos[0]][pos[1]].setBackground(HIGHLIGHT_LEGAL);
+        if (selectedPiece == null || selectedPiece.C() != logicBoard.currentPlayerColor) {
+            if (selection.currentGreenSquares != null && selection.currentGreenSquares.stream().map(Move::end).anyMatch(notation::equals)) {
+                makeMove(notation);
             }
+            resetGreenSquares();
         } else {
-            // Finalize move
-            if (currentGreenSquares != null) {
-                for (Move m : currentGreenSquares) {
-                    byte[] pos = m.end().getPosition();
-                    squares[pos[0]][pos[1]].setBackground((pos[0] + pos[1]) % 2 == 0 ?
-                            LIGHT_SQUARE : DARK_SQUARE);
-                }
-                Move selectedMove = currentGreenSquares.stream().filter(m -> m.end().equals(notation)).findFirst().orElse(null);
-                if (selectedMove != null) {
-                    uiStatusBar.setStatus("Move " + selectedMove);
-                    try {
-                        Notation beforeMove = logicBoard.getKing(logicBoard.currentPlayerColor);
-                        byte[] beforeMoveArr = beforeMove.getPosition();
-                        squares[beforeMoveArr[0]][beforeMoveArr[1]].setBackground((beforeMoveArr[0] + beforeMoveArr[1]) % 2 == 0 ?
-                                LIGHT_SQUARE : DARK_SQUARE);
-
-                        if (selectedMove.moveType() == Move.MoveType.PROMOTION) {
-                            selectedMove = managePromotion(selectedMove);
-                        }
-                        Piece captured = logicBoard.movePiece(selectedMove);
-                        System.out.println("Captured: " + captured);
-                        Notation afterMove = logicBoard.getKing(logicBoard.currentPlayerColor);
-                        byte[] afterMoveArr = afterMove.getPosition();
-                        boolean gameOver = switch (logicBoard.gameStatus()) {
-                            case 0:
-                                yield false;
-                            case 1:
-                                squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(HIGHLIGHT_CHECK);
-                                yield false;
-                            case 2:
-                                yield true;
-                            case 3:
-                                squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(HIGHLIGHT_CHECK);
-                                yield true;
-                            default:
-                                throw new IllegalStateException("Invalid game status");
-                        };
-                        if (gameOver) {
-                            uiStatusBar.setStatus("Game Over");
-                            // Causes IllegalStateException for thread not owner
-                            uiStatusBar.setStatus(String.format("%s wins!",
-                                    Piece.PieceColor.opposite(logicBoard.currentPlayerColor)));
-                            wait(1_000);
-                            resetGame();
-                        }
-                    } catch (IllegalArgumentException e) {
-                        System.err.println("Bad argument: " + e.getMessage());
-                    } catch (InterruptedException e) {
-                        System.err.println("Interrupt: " + e.getMessage());
-                    } catch (IllegalStateException e) {
-                        System.err.println("Probably wait error: " + e.getMessage());
-                    }
-                }
-            }
-            squareSelected = null;
-            currentGreenSquares = null;
+            resetGreenSquares();
+            displayMoves(selectedPiece, notation);
         }
-
         updateBoard();
+    }
+
+    private void makeMove(Notation endPos) {
+        // Debug
+        System.out.println("Move: " + selection.currentlySelectedPiece + ": " + selection.squareSelected + endPos);
+
+        Set<Move> selectedMoves =
+                selection.currentGreenSquares.stream().filter(m -> m.end().equals(endPos)).collect(Collectors.toSet());
+        if (selectedMoves.size() != 1) {
+            throw new IllegalStateException("Invalid number of moves");
+        }
+        Move selectedMove = selectedMoves.iterator().next();
+        if (selectedMove != null) {
+            uiStatusBar.setStatus("Move " + selectedMove);
+            try {
+                Notation beforeMove = logicBoard.getKing(logicBoard.currentPlayerColor);
+                byte[] beforeMoveArr = beforeMove.getPosition();
+                squares[beforeMoveArr[0]][beforeMoveArr[1]].setBackground((beforeMoveArr[0] + beforeMoveArr[1]) % 2 == 0 ?
+                        LIGHT_SQUARE : DARK_SQUARE);
+
+                if (selectedMove.moveType() == Move.MoveType.PROMOTION) {
+                    selectedMove = managePromotion(selectedMove);
+                }
+                Piece captured = logicBoard.movePiece(selectedMove);
+                System.out.println("Captured: " + captured);
+                Notation afterMove = logicBoard.getKing(logicBoard.currentPlayerColor);
+                byte[] afterMoveArr = afterMove.getPosition();
+                boolean gameOver = switch (logicBoard.gameStatus()) {
+                    case 0:
+                        yield false;
+                    case 1:
+                        squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(HIGHLIGHT_CHECK);
+                        yield false;
+                    case 2:
+                        yield true;
+                    case 3:
+                        squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(HIGHLIGHT_CHECK);
+                        yield true;
+                    default:
+                        throw new IllegalStateException("Invalid game status");
+                };
+                if (gameOver) {
+                    uiStatusBar.setStatus("Game Over");
+                    // Causes IllegalStateException for thread not owner
+                    uiStatusBar.setStatus(String.format("%s wins!",
+                            Piece.PieceColor.opposite(logicBoard.currentPlayerColor)));
+                    wait(1_000);
+                    resetGame();
+                }
+            } catch (IllegalArgumentException e) {
+                System.err.println("Bad argument: " + e.getMessage());
+            } catch (InterruptedException e) {
+                System.err.println("Interrupt: " + e.getMessage());
+            } catch (IllegalStateException e) {
+                System.err.println("Probably wait error: " + e.getMessage());
+            }
+        }
+    }
+
+    private void displayMoves(Piece piece, Notation pos) {
+        selection.currentlySelectedPiece = piece;
+        selection.squareSelected = pos;
+        selection.currentGreenSquares =
+                logicBoard.getPieceLegalMoves(pos);
+        for (Move m : selection.currentGreenSquares) {
+            byte[] posArr = m.end().getPosition();
+            squares[posArr[0]][posArr[1]].setBackground(HIGHLIGHT_LEGAL);
+        }
+    }
+
+    private void resetGreenSquares() {
+        if (selection.currentGreenSquares != null) {
+            for (Move m : selection.currentGreenSquares) {
+                byte[] pos = m.end().getPosition();
+                squares[pos[0]][pos[1]].setBackground((pos[0] + pos[1]) % 2 == 0 ?
+                        LIGHT_SQUARE : DARK_SQUARE);
+            }
+        }
+        selection.reset();
     }
 
     private Move managePromotion(Move move) {
