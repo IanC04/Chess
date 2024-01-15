@@ -228,6 +228,41 @@ public class MoveGeneration {
             kingMoves ^= SQUARE_TO_BITBOARD[end];
         }
 
+        return generateCastlingMoves(state, moves, index);
+    }
+
+    private static int generateCastlingMoves(BitBoards state, Move[] moves, int index) {
+        // Castling TODO: check if moving through check
+        if (state.whiteToMove) {
+            // White left
+            if ((state.castleRights & 0b1) != 0 && (state.allPieces & WHITE_KiNG_LEfT_CASTLE_OPEN) == 0) {
+                long castleSquares = WHITE_KING_LEFT_SAFE_NEEDED;
+                while (castleSquares != 0) {
+                    int end = Long.numberOfTrailingZeros(castleSquares);
+                    if (state.safeIndex(true, end)) {
+                        Move move = new Move(WHITE_KING_START, end, Move.MoveType.CASTLE_LEFT, KING);
+                        if (Move.validate(state, move)) {
+                            moves[index++] = move;
+                        }
+                    }
+                    castleSquares ^= SQUARE_TO_BITBOARD[end];
+                }
+                moves[index++] = new Move(WHITE_KING_START, 2, Move.MoveType.CASTLE_LEFT, KING);
+            }
+            // White right
+            if ((state.castleRights & 0b10) != 0 && (state.allPieces & WHITE_KING_RIGHT_CASTLE_OPEN) == 0) {
+                moves[index++] = new Move(WHITE_KING_START, 6, Move.MoveType.CASTLE_RIGHT, KING);
+            }
+        } else {
+            // Black left
+            if ((state.castleRights & 0b100) != 0 && (state.allPieces & BLACK_KING_LEFT_CASTLE_OPEN) == 0) {
+                moves[index++] = new Move(BLACK_KING_START, 58, Move.MoveType.CASTLE_LEFT, KING);
+            }
+            // Black right
+            if ((state.castleRights & 0b1000) != 0 && (state.allPieces & BLACK_KING_RIGHT_CASTLE_OPEN) == 0) {
+                moves[index++] = new Move(BLACK_KING_START, 62, Move.MoveType.CASTLE_RIGHT, KING);
+            }
+        }
         return index;
     }
 }

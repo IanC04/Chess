@@ -2,6 +2,7 @@ package logic;
 
 import ai.Minimax;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
@@ -27,13 +28,14 @@ public class Board {
     // Player statuses
     private final PlayerStatus whiteStatus;
     private final PlayerStatus blackStatus;
+    // Game positions through each game
+    private final ArrayList<String> gameStates;
 
 
     private static class PlayerStatus {
         Notation king;
         GameStatus gameStatus;
         final Piece.PieceColor color;
-
         final HashMap<Piece, Set<Move>> allLegalMoves;
 
         private enum GameStatus {
@@ -73,6 +75,7 @@ public class Board {
         this.ai = new Minimax();
         this.whiteStatus = new PlayerStatus(WHITE);
         this.blackStatus = new PlayerStatus(BLACK);
+        this.gameStates = new ArrayList<>();
         resetBoard();
     }
 
@@ -137,6 +140,7 @@ public class Board {
         this.lastHalfMove = 0;
         this.whiteStatus.reset();
         this.blackStatus.reset();
+        this.gameStates.clear();
         generateAllLegalMoves(this.whiteStatus);
     }
 
@@ -248,6 +252,8 @@ public class Board {
         ++turn;
 
         updateStatus(originalPiece, move);
+
+        gameStates.add(getFEN());
         return captured;
     }
 
@@ -590,7 +596,7 @@ public class Board {
     }
 
     public void aiMove() {
-        String FEN = getFEN();
+        String FEN = gameStates.get(gameStates.size() - 1);
         System.out.println(FEN);
         if (FEN.isBlank()) {
             throw new IllegalStateException("Invalid FEN");

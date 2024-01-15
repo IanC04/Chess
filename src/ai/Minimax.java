@@ -53,7 +53,6 @@ public class Minimax {
 
     /**
      * Get the best move for the current state
-     * TODO: Implement
      *
      * @param FEN string encoding current board position
      * @return the best move NOT in algebraic notation. Format: "a1a2 T"
@@ -64,7 +63,7 @@ public class Minimax {
             return openingMove;
         }
         BitBoards state = new BitBoards(FEN);
-        Move bestMove = rootNegaMax(state, 4, Integer.MIN_VALUE, Integer.MAX_VALUE,
+        Move bestMove = rootNegaMax(state, 10, Integer.MIN_VALUE, Integer.MAX_VALUE,
                 state.whiteToMove);
         if (bestMove == null) {
             throw new IllegalStateException("No move found");

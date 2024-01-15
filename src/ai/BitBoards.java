@@ -65,9 +65,12 @@ class BitBoards {
     static final int A1 = 0, H1 = 7, A2 = 8, A8 = 56, H8 = 63,
             WHITE_KING_START = 4,
             BLACK_KING_START = 60;
-    static final long RANK_1 = 0xFFL, RANK_2 = 0xFF00L, RANK_3 = 0xFF0000L, RANK_4 = 0xFF000000L,
-            RANK_5 = 0xFF00000000L, RANK_6 = 0xFF0000000000L, RANK_7 = 0xFF000000000000L, RANK_8
-            = 0xFF00000000000000L, A_FILE = 0x0101010101010101L, H_FILE = 0x8080808080808080L;
+    static final long RANK_1 = 0xFFL, RANK_2 = 0xFFL << 8, RANK_3 = 0xFFL << 16, RANK_4 =
+            0xFFL << 24, RANK_5 = 0xFFL << 32, RANK_6 = 0xFFL << 40, RANK_7 = 0xFFL << 48, RANK_8
+            = 0xFFL << 56, WHITE_KiNG_LEfT_CASTLE_OPEN = 0xEL, WHITE_KING_RIGHT_CASTLE_OPEN = 0x60L,
+            BLACK_KING_LEFT_CASTLE_OPEN = 0xEL << 56, BLACK_KING_RIGHT_CASTLE_OPEN =
+            0x60L << 56, WHITE_KING_LEFT_SAFE_NEEDED = 0x1CL, WHITE_KING_RIGHT_SAFE_NEEDED = 0x70L,
+            BLACK_KING_LEFT_SAFE_NEEDED = 0x1CL << 56, BLACK_KING_RIGHT_SAFE_NEEDED = 0x70L << 56;
     static final long[] SQUARE_TO_BITBOARD = new long[64];
 
     static {
@@ -388,11 +391,17 @@ class BitBoards {
         if (newState.whiteToMove) {
             switch (move.pieceType()) {
                 case PAWN -> newState.whitePawns ^= moveBitboard;
-                case ROOK -> newState.whiteRooks ^= moveBitboard;
+                case ROOK -> {
+                    newState.castleRights &= move.start() == H1 ? 0b1110 : 0b1101;
+                    newState.whiteRooks ^= moveBitboard;
+                }
                 case KNIGHT -> newState.whiteKnights ^= moveBitboard;
                 case BISHOP -> newState.whiteBishops ^= moveBitboard;
                 case QUEEN -> newState.whiteQueens ^= moveBitboard;
-                case KING -> newState.whiteKing ^= moveBitboard;
+                case KING -> {
+                    newState.castleRights &= 0b1100;
+                    newState.whiteKing ^= moveBitboard;
+                }
                 default -> throw new IllegalStateException("Unexpected value in make move " +
                         "normal: " + move.pieceType());
             }
@@ -410,11 +419,17 @@ class BitBoards {
         } else {
             switch (move.pieceType()) {
                 case PAWN -> newState.blackPawns ^= moveBitboard;
-                case ROOK -> newState.blackRooks ^= moveBitboard;
+                case ROOK -> {
+                    newState.castleRights &= move.start() == H8 ? 0b1011 : 0b0111;
+                    newState.blackRooks ^= moveBitboard;
+                }
                 case KNIGHT -> newState.blackKnights ^= moveBitboard;
                 case BISHOP -> newState.blackBishops ^= moveBitboard;
                 case QUEEN -> newState.blackQueens ^= moveBitboard;
-                case KING -> newState.blackKing ^= moveBitboard;
+                case KING -> {
+                    newState.castleRights &= 0b0011;
+                    newState.blackKing ^= moveBitboard;
+                }
                 default -> throw new IllegalStateException("Unexpected value in make move " +
                         "normal: " + move.pieceType());
             }
