@@ -2,7 +2,7 @@ package ai;
 
 import static ai.BitBoards.*;
 
-record Move(int start, int end, MoveType moveType, PieceType pieceType, int value, boolean valid) {
+record Move(int start, int end, MoveType moveType, PieceType pieceType, int value) {
     enum MoveType {
         ERROR, UNKNOWN, NORMAL, CASTLE_LEFT, CASTLE_RIGHT, PAWN_DOUBLE_MOVE, EN_PASSANT,
         PROMOTE_ROOK,
@@ -32,19 +32,15 @@ record Move(int start, int end, MoveType moveType, PieceType pieceType, int valu
     }
 
     Move() {
-        this(-1, -1, MoveType.ERROR, PieceType.ERROR, Integer.MIN_VALUE, false);
+        this(-1, -1, MoveType.ERROR, PieceType.ERROR, Integer.MIN_VALUE);
     }
 
     Move(int start, int end, int value) {
-        this(start, end, MoveType.UNKNOWN, PieceType.UNKNOWN, value, true);
+        this(start, end, MoveType.UNKNOWN, PieceType.UNKNOWN, value);
     }
 
     Move(int start, int end, MoveType moveType, PieceType pieceType) {
-        this(start, end, moveType, pieceType, Integer.MIN_VALUE, true);
-    }
-
-    Move(int start, int end, MoveType moveType, PieceType pieceType, int value) {
-        this(start, end, moveType, pieceType, value, true);
+        this(start, end, moveType, pieceType, Integer.MIN_VALUE);
     }
 
     static int notationToIndex(String pos) {
@@ -58,20 +54,52 @@ record Move(int start, int end, MoveType moveType, PieceType pieceType, int valu
         return SQUARE_NAMES[index];
     }
 
+    /**
+     * Makes sure the move is a legal move
+     *
+     * @param state current state
+     * @param move  move to validate
+     * @return true if the move is legal
+     */
     static boolean validate(BitBoards state, Move move) {
         if (move.start < A1 || move.start > H8 || move.end < A1 || move.end > H8) {
             throw new IllegalArgumentException("Invalid move: " + move);
         }
+        if (move.moveType == MoveType.ERROR) {
+            throw new IllegalArgumentException("Error move type: " + move);
+        }
+
+        if (move.moveType() == MoveType.CASTLE_LEFT || move.moveType() == MoveType.CASTLE_RIGHT) {
+            boolean valid = validateCastle(state, move);
+            if (!valid) {
+                return false;
+            }
+        }
+
+        // Is king checked after the move?
+        BitBoards tempState = state.tryMove(move);
+        return tempState.safeSquare(state.whiteToMove, state.whiteToMove ? tempState.whiteKing :
+                tempState.blackKing);
+    }
+
+    private static boolean validateCastle(BitBoards state, Move move) {
         if (move.moveType() == MoveType.CASTLE_LEFT) {
-            // TODO
-        } else if (move.moveType() == MoveType.CASTLE_RIGHT) {
-            // TODO
+            boolean safe = state.safeSquare(state.whiteToMove, (state.whiteToMove ? state.whiteKing :
+                    state.blackKing) >>> 1);
+            if (!safe) {
+                return false;
+            }
         }
-        BitBoards tempState = state.makeMove(move);
-        if (tempState.safeIndex(state.whiteToMove, state.whiteToMove ? tempState.whiteKing : tempState.blackKing)) {
-            return false;
+        else {
+            boolean safe = state.safeSquare(state.whiteToMove, (state.whiteToMove ? state.whiteKing :
+                    state.blackKing) << 1);
+            if (!safe) {
+                return false;
+            }
         }
-        return true;
+
+        return state.safeSquare(state.whiteToMove, (state.whiteToMove ? state.whiteKing :
+                state.blackKing));
     }
 
     @Override

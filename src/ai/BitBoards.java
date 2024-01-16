@@ -236,6 +236,7 @@ class BitBoards {
     int castleRights;
 
     enum GameStatus {
+        // Unsure if these are all the game statuses
         NORMAL, CHECK, CHECKMATE, STALEMATE, FIFTY_MOVE_RULE, THREEFOLD_REPETITION,
         INSUFFICIENT_MATERIAL
     }
@@ -359,7 +360,13 @@ class BitBoards {
         this.gameStatus = state.gameStatus;
     }
 
-    BitBoards makeMove(Move move) {
+    /**
+     * Called when validating a move
+     *
+     * @param move move to make
+     * @return new state
+     */
+    BitBoards tryMove(Move move) {
         BitBoards newState = switch (move.moveType()) {
             case NORMAL -> makeMoveNormal(move);
             case EN_PASSANT -> makeMoveEnPassant(move);
@@ -373,13 +380,51 @@ class BitBoards {
         };
         newState.whiteToMove = !whiteToMove;
         ++newState.moveCounter;
-
         return newState;
     }
 
     /**
-     * TODO: Implement
+     * Called when making a move and updating the game status
      *
+     * @param move move to make
+     * @return new state
+     */
+    BitBoards makeMove(Move move) {
+        BitBoards newState = tryMove(move);
+        updateGameStatus(newState);
+        return newState;
+    }
+
+    private void updateGameStatus(BitBoards newState) {
+        boolean inCheck = safeSquare(newState.whiteToMove, newState.whiteToMove ? newState.whiteKing :
+                newState.blackKing);
+        boolean hasLegalMove = MoveGeneration.hasLegalMoves(newState);
+        if (inCheck) {
+            newState.gameStatus = hasLegalMove ? GameStatus.CHECK : GameStatus.CHECKMATE;
+        } else {
+            newState.gameStatus = hasLegalMove ? GameStatus.NORMAL : GameStatus.STALEMATE;
+        }
+
+        if (newState.halfMoveClock >= 100) {
+            newState.gameStatus = GameStatus.FIFTY_MOVE_RULE;
+        }
+        if (Long.bitCount(newState.whitePawns | newState.blackPawns | newState.whiteRooks | newState.blackRooks | newState.whiteQueens | newState.blackQueens) == 0) {
+            int knightCount = Long.bitCount(newState.whiteKnights | newState.blackKnights);
+            int bishopCount = Long.bitCount(newState.whiteBishops | newState.blackBishops);
+            if (knightCount <= 2 || bishopCount <= 1) {
+                newState.gameStatus = GameStatus.INSUFFICIENT_MATERIAL;
+            }
+        }
+    }
+
+    boolean gameOver() {
+        return switch (gameStatus) {
+            case CHECKMATE, STALEMATE, FIFTY_MOVE_RULE, THREEFOLD_REPETITION, INSUFFICIENT_MATERIAL -> true;
+            case NORMAL, CHECK -> false;
+        };
+    }
+
+    /**
      * @param move move to make
      * @return new state
      */
@@ -634,14 +679,80 @@ class BitBoards {
     }
 
     /**
-     * TODO: Implement for move validation
+     * Checks if the current color of the board is being attacked on the specified square
      *
      * @param color  color of the player to check
      * @param square bitboard of the square to check
      * @return if the index is safe
      */
-    boolean safeIndex(boolean color, long square) {
-        return false;
+    boolean safeSquare(boolean color, long square) {
+        long enemyPawns = color ? blackPawns : whitePawns;
+        long enemyRooks = color ? blackRooks : whiteRooks;
+        long enemyKnights = color ? blackKnights : whiteKnights;
+        long enemyBishops = color ? blackBishops : whiteBishops;
+        long enemyQueens = color ? blackQueens : whiteQueens;
+        long enemyKing = color ? blackKing : whiteKing;
+
+        // Pawn attacks
+        while (enemyPawns != 0) {
+            int enemyPawnIndex = Long.numberOfTrailingZeros(enemyPawns);
+            if (color) {
+                if ((BLACK_PAWN_POSSIBLE_CAPTURES[enemyPawnIndex] & square) != 0) {
+                    return false;
+                }
+            } else {
+                if ((WHITE_PAWN_POSSIBLE_CAPTURES[enemyPawnIndex] & square) != 0) {
+                    return false;
+                }
+            }
+            enemyPawns ^= SQUARE_TO_BITBOARD[enemyPawnIndex];
+        }
+
+        // Rook attacks
+        while (enemyRooks != 0) {
+            int enemyRookIndex = Long.numberOfTrailingZeros(enemyRooks);
+            if ((MoveGeneration.getRookAttacks(enemyRookIndex, allPieces) & square) != 0) {
+                return false;
+            }
+            enemyRooks ^= SQUARE_TO_BITBOARD[enemyRookIndex];
+        }
+
+        // Knight attacks
+        while (enemyKnights != 0) {
+            int enemyKnightIndex = Long.numberOfTrailingZeros(enemyKnights);
+            if ((KNIGHT_POSSIBLE_MOVES[enemyKnightIndex] & square) != 0) {
+                return false;
+            }
+            enemyKnights ^= SQUARE_TO_BITBOARD[enemyKnightIndex];
+        }
+
+        // Bishop attacks
+        while (enemyBishops != 0) {
+            int enemyBishopIndex = Long.numberOfTrailingZeros(enemyBishops);
+            if ((MoveGeneration.getBishopAttacks(enemyBishopIndex, allPieces) & square) != 0) {
+                return false;
+            }
+            enemyBishops ^= SQUARE_TO_BITBOARD[enemyBishopIndex];
+        }
+
+        // Queen attacks
+        while (enemyQueens != 0) {
+            int enemyQueenIndex = Long.numberOfTrailingZeros(enemyQueens);
+            if (((MoveGeneration.getRookAttacks(enemyQueenIndex, allPieces) | MoveGeneration.getBishopAttacks(enemyQueenIndex, allPieces)) & square) != 0) {
+                return false;
+            }
+            enemyQueens ^= SQUARE_TO_BITBOARD[enemyQueenIndex];
+        }
+
+        // King attacks
+        while (enemyKing != 0) {
+            int enemyKingIndex = Long.numberOfTrailingZeros(enemyKing);
+            if ((KING_POSSIBLE_MOVES[enemyKingIndex] & square) != 0) {
+                return false;
+            }
+            enemyKing ^= SQUARE_TO_BITBOARD[enemyKingIndex];
+        }
+        return true;
     }
 
     GameStatus getGameStatus() {
@@ -649,7 +760,7 @@ class BitBoards {
     }
 
     /**
-     * TODO: Implement
+     * TODO: evaluate current board
      *
      * @return value of the board
      */

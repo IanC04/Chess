@@ -10,7 +10,7 @@ import java.util.Scanner;
 public class Minimax {
     private final HashMap<String, Move[]> OPENING_BOOK;
 
-    // TODO: Implement
+    // TODO: Implement transposition table
     private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
 
     public Minimax() {
@@ -105,10 +105,10 @@ public class Minimax {
      */
     private Move rootNegaMax(BitBoards state, int depth, int alpha, int beta, boolean color) {
         if (depth == 0) {
-            return new Move();
+            throw new IllegalArgumentException("Depth must be greater than 0");
         }
 
-        Move[] allMoves = MoveGeneration.generateMoves(state);
+        Move[] allMoves = MoveGeneration.generateLegalMoves(state);
         Move bestMove = new Move();
         for (Move move : allMoves) {
             System.out.println(move);
@@ -123,11 +123,11 @@ public class Minimax {
     }
 
     private int negaMax(BitBoards state, int depth, int alpha, int beta, boolean color) {
-        if (depth == 0) {
+        if (depth == 0 || state.gameOver()) {
             return state.evaluateBoard();
         }
 
-        Move[] allMoves = MoveGeneration.generateMoves(state);
+        Move[] allMoves = MoveGeneration.generateLegalMoves(state);
         int bestValue = Integer.MIN_VALUE;
         for (Move move : allMoves) {
             int value = -negaMax(state.makeMove(move), depth - 1, -beta, -alpha, !color);

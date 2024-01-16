@@ -7,14 +7,38 @@ import static ai.Move.PieceType.*;
 
 public class MoveGeneration {
 
+    static boolean hasLegalMoves(BitBoards state) {
+        Move[] moves = generateLegalMoves(state);
+        return moves.length != 0;
+    }
+
     /**
-     * Generate all valid moves for the current state
+     * Generate all legal moves for the current state, which is a subset of all possible moves
+     *
+     * @param state current state
+     * @return all legal moves
+     */
+    static Move[] generateLegalMoves(BitBoards state) {
+        Move[] moves = generateMoves(state);
+        int index = 0;
+        for (Move move : moves) {
+            if (Move.validate(state, move)) {
+                moves[index++] = move;
+            }
+        }
+
+        return Arrays.copyOf(moves, index);
+    }
+
+
+    /**
+     * Generate all possible moves for the current state
      * <a href="https://chess.stackexchange.com/questions/4490/maximum-possible-movement-in-a-turn">Max: 218</a>
      *
      * @param state current state
      * @return all possible moves
      */
-    static Move[] generateMoves(BitBoards state) {
+    private static Move[] generateMoves(BitBoards state) {
         Move[] moves = new Move[256];
         int index = 0;
         long friendlyPawns = state.whiteToMove ? state.whitePawns : state.blackPawns;
@@ -82,10 +106,8 @@ public class MoveGeneration {
             if (enPassant != 0) {
                 int start = Long.numberOfTrailingZeros(enPassant);
                 int end = state.enPassantIndex;
-                Move move = new Move(start, end, Move.MoveType.EN_PASSANT, PAWN);
-                if (Move.validate(state, move)) {
-                    moves[index++] = move;
-                }
+                moves[index++] = new Move(start, end, Move.MoveType.EN_PASSANT, PAWN);
+                ;
             }
         }
 
@@ -115,17 +137,11 @@ public class MoveGeneration {
         boolean at_end = (white && (SQUARE_TO_BITBOARD[end] & RANK_8) != 0) || (!white && (SQUARE_TO_BITBOARD[end] & RANK_1) != 0);
         if (at_end) {
             for (Move.MoveType moveType : Move.MoveType.PROMOTION_TYPES) {
-                move = new Move(start, end, moveType, PAWN);
-                if (Move.validate(state, move)) {
-                    moves[index++] = move;
-                }
+                moves[index++] = new Move(start, end, moveType, PAWN);
             }
         } else {
-            move = new Move(start, end, doubleMove ? Move.MoveType.PAWN_DOUBLE_MOVE :
+            moves[index++] = new Move(start, end, doubleMove ? Move.MoveType.PAWN_DOUBLE_MOVE :
                     Move.MoveType.NORMAL, PAWN);
-            if (Move.validate(state, move)) {
-                moves[index++] = move;
-            }
         }
 
         return index;
@@ -137,21 +153,30 @@ public class MoveGeneration {
 
         while (friendlyRooks != 0) {
             int start = Long.numberOfTrailingZeros(friendlyRooks);
-            // TODO: Fix this
-            long rookMoves = (ROOK_MAGICS[start] * (state.allPieces & ROOK_POSSIBLE_MOVES[start]));
+            long rookMoves = getRookAttacks(start, state.allPieces);
             rookMoves &= ~friendlyPieces;
             while (rookMoves != 0) {
                 int end = Long.numberOfTrailingZeros(rookMoves);
-                Move move = new Move(start, end, Move.MoveType.NORMAL, fromQueen ? QUEEN : ROOK);
-                if (Move.validate(state, move)) {
-                    moves[index++] = move;
-                }
+                moves[index++] = new Move(start, end, Move.MoveType.NORMAL, fromQueen ? QUEEN : ROOK);
                 rookMoves ^= SQUARE_TO_BITBOARD[end];
             }
             friendlyRooks ^= SQUARE_TO_BITBOARD[start];
         }
 
         return index;
+    }
+
+    /**
+     * TODO: add magic bitboards and fix index logic
+     *
+     * @param rookIndex index of the rook to get attacks for
+     * @param allPieces all pieces on the board
+     * @return all possible rook attacks
+     */
+    static long getRookAttacks(int rookIndex, long allPieces) {
+        long relevantSquares = allPieces & ROOK_POSSIBLE_MOVES[rookIndex];
+        long index = relevantSquares * ROOK_MAGICS[rookIndex];
+        return ROOK_ATTACKS[rookIndex][(int) index];
     }
 
     private static int generateKnightMoves(BitBoards state, Move[] moves, int index, long friendlyKnights) {
@@ -167,10 +192,7 @@ public class MoveGeneration {
             knightMoves &= ~friendlyPieces;
             while (knightMoves != 0) {
                 int end = Long.numberOfTrailingZeros(knightMoves);
-                Move move = new Move(start, end, Move.MoveType.NORMAL, KNIGHT);
-                if (Move.validate(state, move)) {
-                    moves[index++] = move;
-                }
+                moves[index++] = new Move(start, end, Move.MoveType.NORMAL, KNIGHT);
                 knightMoves ^= SQUARE_TO_BITBOARD[end];
             }
             friendlyKnights ^= SQUARE_TO_BITBOARD[start];
@@ -185,21 +207,30 @@ public class MoveGeneration {
 
         while (friendlyBishops != 0) {
             int start = Long.numberOfTrailingZeros(friendlyBishops);
-            // TODO: fix
-            long bishopMoves = (BISHOP_MAGICS[start] * (state.allPieces & BISHOP_POSSIBLE_MOVES[start]));
+            long bishopMoves = getBishopAttacks(start, state.allPieces);
             bishopMoves &= ~friendlyPieces;
             while (bishopMoves != 0) {
                 int end = Long.numberOfTrailingZeros(bishopMoves);
-                Move move = new Move(start, end, Move.MoveType.NORMAL, fromQueen ? QUEEN : BISHOP);
-                if (Move.validate(state, move)) {
-                    moves[index++] = move;
-                }
+                moves[index++] = new Move(start, end, Move.MoveType.NORMAL, fromQueen ? QUEEN : BISHOP);
                 bishopMoves ^= SQUARE_TO_BITBOARD[end];
             }
             friendlyBishops ^= SQUARE_TO_BITBOARD[start];
         }
 
         return index;
+    }
+
+    /**
+     * TODO: add magic bitboards and fix index logic
+     *
+     * @param bishopIndex index of the bishop to get attacks for
+     * @param allPieces   all pieces on the board
+     * @return all possible bishop attacks
+     */
+    static long getBishopAttacks(int bishopIndex, long allPieces) {
+        long relevantSquares = allPieces & BISHOP_POSSIBLE_MOVES[bishopIndex];
+        long index = relevantSquares * BISHOP_MAGICS[bishopIndex];
+        return BISHOP_ATTACKS[bishopIndex][(int) index];
     }
 
     private static int generateQueenMoves(BitBoards state, Move[] moves, int index, long friendlyQueens) {
@@ -221,10 +252,7 @@ public class MoveGeneration {
         kingMoves &= ~friendlyPieces;
         while (kingMoves != 0) {
             int end = Long.numberOfTrailingZeros(kingMoves);
-            Move move = new Move(start, end, Move.MoveType.NORMAL, KING);
-            if (Move.validate(state, move)) {
-                moves[index++] = move;
-            }
+            moves[index++] = new Move(start, end, Move.MoveType.NORMAL, KING);
             kingMoves ^= SQUARE_TO_BITBOARD[end];
         }
 
@@ -232,26 +260,16 @@ public class MoveGeneration {
     }
 
     private static int generateCastlingMoves(BitBoards state, Move[] moves, int index) {
-        // Castling TODO: check if moving through check
         if (state.whiteToMove) {
             // White left
             if ((state.castleRights & 0b1) != 0 && (state.allPieces & WHITE_KiNG_LEfT_CASTLE_OPEN) == 0) {
-                long castleSquares = WHITE_KING_LEFT_SAFE_NEEDED;
-                while (castleSquares != 0) {
-                    int end = Long.numberOfTrailingZeros(castleSquares);
-                    if (state.safeIndex(true, end)) {
-                        Move move = new Move(WHITE_KING_START, end, Move.MoveType.CASTLE_LEFT, KING);
-                        if (Move.validate(state, move)) {
-                            moves[index++] = move;
-                        }
-                    }
-                    castleSquares ^= SQUARE_TO_BITBOARD[end];
-                }
-                moves[index++] = new Move(WHITE_KING_START, 2, Move.MoveType.CASTLE_LEFT, KING);
+                moves[index++] = new Move(WHITE_KING_START, 2, Move.MoveType.CASTLE_LEFT,
+                        KING);
             }
             // White right
             if ((state.castleRights & 0b10) != 0 && (state.allPieces & WHITE_KING_RIGHT_CASTLE_OPEN) == 0) {
-                moves[index++] = new Move(WHITE_KING_START, 6, Move.MoveType.CASTLE_RIGHT, KING);
+                moves[index++] = new Move(WHITE_KING_START, 6, Move.MoveType.CASTLE_RIGHT,
+                        KING);
             }
         } else {
             // Black left
@@ -260,7 +278,8 @@ public class MoveGeneration {
             }
             // Black right
             if ((state.castleRights & 0b1000) != 0 && (state.allPieces & BLACK_KING_RIGHT_CASTLE_OPEN) == 0) {
-                moves[index++] = new Move(BLACK_KING_START, 62, Move.MoveType.CASTLE_RIGHT, KING);
+                moves[index++] = new Move(BLACK_KING_START, 62, Move.MoveType.CASTLE_RIGHT,
+                        KING);
             }
         }
         return index;

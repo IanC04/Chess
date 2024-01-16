@@ -141,6 +141,7 @@ public class Board {
         this.whiteStatus.reset();
         this.blackStatus.reset();
         this.gameStates.clear();
+        this.gameStates.add(getFEN());
         generateAllLegalMoves(this.whiteStatus);
     }
 
