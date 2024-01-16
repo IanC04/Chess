@@ -43,13 +43,13 @@ public class Board {
         }
 
         private PlayerStatus(Piece.PieceColor color) {
-            this(color, color == WHITE ? E1 : E8, GameStatus.NORMAL);
+            this(color, color == WHITE ? E1 : E8);
         }
 
-        private PlayerStatus(Piece.PieceColor color, Notation king, GameStatus gameStatus) {
+        private PlayerStatus(Piece.PieceColor color, Notation king) {
             this.color = color;
             this.king = king;
-            this.gameStatus = gameStatus;
+            this.gameStatus = GameStatus.NORMAL;
             this.allLegalMoves = new HashMap<>();
         }
 

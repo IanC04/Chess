@@ -5,8 +5,7 @@ package ai;
  * <a href="https://mediocrechess.blogspot.com/2007/01/guide-transposition-tables.html">Website</a>
  */
 public class TranspositionTable {
-    private class Hashentry
-    {
+    private static class HashEntry {
         long zobrist;
         int depth;
         int flag;
@@ -14,9 +13,8 @@ public class TranspositionTable {
         int ancient;
         Move move;
 
-        Hashentry(long zobrist, int depth, int flag,
-                         int eval, int ancient, Move move)
-        {
+        HashEntry(long zobrist, int depth, int flag,
+                  int eval, int ancient, Move move) {
             this.zobrist = zobrist;
             this.depth = depth;
             this.flag = flag;

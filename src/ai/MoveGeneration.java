@@ -175,7 +175,8 @@ public class MoveGeneration {
      */
     static long getRookAttacks(int rookIndex, long allPieces) {
         long relevantSquares = allPieces & ROOK_POSSIBLE_MOVES[rookIndex];
-        long index = relevantSquares * ROOK_MAGICS[rookIndex];
+        long fullIndex = relevantSquares * ROOK_MAGICS[rookIndex];
+        long index = fullIndex >>> (64 - ROOK_RELEVANT_BITS[rookIndex]);
         return ROOK_ATTACKS[rookIndex][(int) index];
     }
 
@@ -229,7 +230,8 @@ public class MoveGeneration {
      */
     static long getBishopAttacks(int bishopIndex, long allPieces) {
         long relevantSquares = allPieces & BISHOP_POSSIBLE_MOVES[bishopIndex];
-        long index = relevantSquares * BISHOP_MAGICS[bishopIndex];
+        long fullIndex = relevantSquares * BISHOP_MAGICS[bishopIndex];
+        long index = fullIndex >>> (64 - BISHOP_RELEVANT_BITS[bishopIndex]);
         return BISHOP_ATTACKS[bishopIndex][(int) index];
     }
 
