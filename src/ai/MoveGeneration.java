@@ -167,17 +167,16 @@ public class MoveGeneration {
     }
 
     /**
-     * TODO: add magic bitboards and fix index logic
+     * WARNING: Includes capturing own pieces as possible attacks
      *
      * @param rookIndex index of the rook to get attacks for
      * @param allPieces all pieces on the board
      * @return all possible rook attacks
      */
     static long getRookAttacks(int rookIndex, long allPieces) {
-        long relevantSquares = allPieces & ROOK_POSSIBLE_MOVES[rookIndex];
-        long fullIndex = relevantSquares * ROOK_MAGICS[rookIndex];
-        long index = fullIndex >>> (64 - ROOK_RELEVANT_BITS[rookIndex]);
-        return ROOK_ATTACKS[rookIndex][(int) index];
+        long blockers = allPieces & ROOK_BLOCKER_MASK[rookIndex];
+        int index = (int) ((blockers * ROOK_MAGICS[rookIndex]) >>> (64 - ROOK_RELEVANT_BITS[rookIndex]));
+        return ROOK_ATTACKS[rookIndex][index];
     }
 
     private static int generateKnightMoves(BitBoards state, Move[] moves, int index, long friendlyKnights) {
@@ -222,17 +221,16 @@ public class MoveGeneration {
     }
 
     /**
-     * TODO: add magic bitboards and fix index logic
+     * WARNING: Includes capturing own pieces as possible attacks
      *
      * @param bishopIndex index of the bishop to get attacks for
      * @param allPieces   all pieces on the board
      * @return all possible bishop attacks
      */
     static long getBishopAttacks(int bishopIndex, long allPieces) {
-        long relevantSquares = allPieces & BISHOP_POSSIBLE_MOVES[bishopIndex];
-        long fullIndex = relevantSquares * BISHOP_MAGICS[bishopIndex];
-        long index = fullIndex >>> (64 - BISHOP_RELEVANT_BITS[bishopIndex]);
-        return BISHOP_ATTACKS[bishopIndex][(int) index];
+        long relevantSquares = allPieces & BISHOP_BLOCKER_MASK[bishopIndex];
+        int index = (int) ((relevantSquares * BISHOP_MAGICS[bishopIndex]) >>> (64 - BISHOP_RELEVANT_BITS[bishopIndex]));
+        return BISHOP_ATTACKS[bishopIndex][index];
     }
 
     private static int generateQueenMoves(BitBoards state, Move[] moves, int index, long friendlyQueens) {

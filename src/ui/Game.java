@@ -149,6 +149,7 @@ class UIBoard extends JPanel {
         uiStatusBar.setStatus("New Game");
         logicBoard.resetBoard();
         ai.resetAI();
+        resetBoardBackground();
         updateBoard();
     }
 
@@ -172,6 +173,15 @@ class UIBoard extends JPanel {
         uiStatusBar.setStatus(String.format("AI Player %s with color=%s", ai.aiPlayer ?
                 "enabled" : "disabled", ai.aiColor));
         updateBoard();
+    }
+
+    private void resetBoardBackground() {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                squares[i][j].setBackground((i + j) % 2 == 0 ?
+                        LIGHT_SQUARE : DARK_SQUARE);
+            }
+        }
     }
 
     /**
@@ -365,7 +375,7 @@ class UIStatusBar extends JLabel {
     }
 
     void setStatus(String status) {
-        System.out.println(status);
+        // System.out.println(status);
         setText(status);
     }
 }

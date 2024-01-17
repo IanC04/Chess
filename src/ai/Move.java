@@ -89,8 +89,7 @@ record Move(int start, int end, MoveType moveType, PieceType pieceType, int valu
             if (!safe) {
                 return false;
             }
-        }
-        else {
+        } else {
             boolean safe = state.safeSquare(state.whiteToMove, (state.whiteToMove ? state.whiteKing :
                     state.blackKing) << 1);
             if (!safe) {
@@ -104,8 +103,10 @@ record Move(int start, int end, MoveType moveType, PieceType pieceType, int valu
 
     @Override
     public String toString() {
+        if (start == -1 || end == -1 || moveType == MoveType.ERROR) {
+            return "ERROR";
+        }
         return indexToNotation(start) + indexToNotation(end) + " " + switch (moveType) {
-            case ERROR -> "ERR";
             case UNKNOWN -> "U";
             case NORMAL -> "N";
             case CASTLE_LEFT -> "CL";
@@ -116,6 +117,7 @@ record Move(int start, int end, MoveType moveType, PieceType pieceType, int valu
             case PROMOTE_KNIGHT -> "K";
             case PROMOTE_BISHOP -> "B";
             case PROMOTE_QUEEN -> "Q";
+            default -> throw new IllegalStateException("Unexpected value: " + moveType);
         };
     }
 }
