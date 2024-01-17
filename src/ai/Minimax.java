@@ -51,26 +51,6 @@ public class Minimax {
         }
     }
 
-    /**
-     * Get the best move for the current state
-     *
-     * @param FEN string encoding current board position
-     * @return the best move NOT in algebraic notation. Format: "a1a2 T"
-     */
-    public String getBestMove(String FEN) {
-        String openingMove = checkOpeningBook(FEN);
-        if (openingMove != null) {
-            return openingMove;
-        }
-        BitBoards state = new BitBoards(FEN);
-        Move bestMove = rootNegaMax(state, 6, Integer.MIN_VALUE, Integer.MAX_VALUE,
-                state.whiteToMove);
-        if (bestMove == null) {
-            throw new IllegalStateException("No move found");
-        }
-        return bestMove.toString();
-    }
-
     private String checkOpeningBook(String FEN) {
         // Opening moves
         String bookKey = removeMoveCounter(FEN);
@@ -89,6 +69,26 @@ public class Minimax {
         }
 
         return null;
+    }
+
+    /**
+     * Get the best move for the current state
+     *
+     * @param FEN string encoding current board position
+     * @return the best move NOT in algebraic notation. Format: "a1a2 T"
+     */
+    public String getBestMove(String FEN) {
+        String openingMove = checkOpeningBook(FEN);
+        if (openingMove != null) {
+            return openingMove;
+        }
+        BitBoards state = new BitBoards(FEN);
+        Move bestMove = rootNegaMax(state, 5, Integer.MIN_VALUE, Integer.MAX_VALUE,
+                state.whiteToMove);
+        if (bestMove == null) {
+            throw new IllegalStateException("No move found");
+        }
+        return bestMove.toString();
     }
 
     private String removeMoveCounter(String FEN) {
@@ -111,7 +111,6 @@ public class Minimax {
         Move[] allMoves = MoveGeneration.generateLegalMoves(state);
         Move bestMove = new Move();
         for (Move move : allMoves) {
-            System.out.println(move);
             BitBoards newState = state.makeMove(move);
             int score = -negaMax(newState, depth - 1, -beta, -alpha, !color);
             if (score > bestMove.value()) {
@@ -122,6 +121,17 @@ public class Minimax {
         return bestMove;
     }
 
+    /**
+     * Recursive negamax algorithm
+     * TODO: Fix algorithm
+     *
+     * @param state current state
+     * @param depth current depth
+     * @param alpha minimum score
+     * @param beta maximum score
+     * @param color color to move
+     * @return the best score
+     */
     private int negaMax(BitBoards state, int depth, int alpha, int beta, boolean color) {
         if (depth == 0 || state.gameOver()) {
             return state.evaluateBoard();

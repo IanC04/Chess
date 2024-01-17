@@ -103,11 +103,11 @@ public class MoveGeneration {
             }
 
             enPassant &= friendlyPawns;
-            if (enPassant != 0) {
+            while (enPassant != 0) {
                 int start = Long.numberOfTrailingZeros(enPassant);
                 int end = state.enPassantIndex;
                 moves[index++] = new Move(start, end, Move.MoveType.EN_PASSANT, PAWN);
-                ;
+                enPassant ^= SQUARE_TO_BITBOARD[start];
             }
         }
 

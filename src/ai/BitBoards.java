@@ -10,109 +10,107 @@ class BitBoards {
      * <br>Inspired by
      * <a href="https://github.com/bartekspitza/sophia/blob/master/src/evaluation.c">GitHub</a>
      */
-    static final int[][] WHITE_PAWN_POS_VALUES = {
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {50, 50, 50, 50, 50, 50, 50, 50},
-            {10, 10, 20, 30, 30, 20, 10, 10},
-            {5, 5, 10, 25, 25, 10, 5, 5},
-            {0, 0, 0, 20, 20, 0, 0, 0},
-            {5, -5, -10, 0, 0, -10, -5, 5},
-            {5, 10, 10, -20, -20, 10, 10, 5},
-            {0, 0, 0, 0, 0, 0, 0, 0}
-    };
+    static final int[] WHITE_PAWN_POS_VALUES = {
+            0, 0, 0, 0, 0, 0, 0, 0,
+            5, 10, 10, -20, -20, 10, 10, 5,
+            5, -5, -10, 0, 0, -10, -5, 5,
+            0, 0, 0, 20, 20, 0, 0, 0,
+            5, 5, 10, 25, 25, 10, 5, 5,
+            10, 10, 20, 30, 30, 20, 10, 10,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            0, 0, 0, 0, 0, 0, 0, 0};
 
-    static final int[][] BLACK_PAWN_POS_VALUES = new int[8][8];
+    static final int[] BLACK_PAWN_POS_VALUES = new int[64];
 
     static {
-        for (int i = 0; i < 8; i++) {
-            BLACK_PAWN_POS_VALUES[i] = Arrays.copyOf(WHITE_PAWN_POS_VALUES[7 - i], 8);
+        for (int i = 0; i < 64; i++) {
+            BLACK_PAWN_POS_VALUES[i] = WHITE_PAWN_POS_VALUES[63 - i];
         }
     }
 
-    static final int[][] WHITE_KNIGHT_POS_VALUES = {
-            {-50, -40, -30, -30, -30, -30, -40, -50},
-            {-40, -20, 0, 0, 0, 0, -20, -40},
-            {-30, 0, 10, 15, 15, 10, 0, -30},
-            {-30, 5, 15, 20, 20, 15, 5, -30},
-            {-30, 0, 15, 20, 20, 15, 0, -30},
-            {-30, 5, 10, 15, 15, 10, 5, -30},
-            {-40, -20, 0, 5, 5, 0, -20, -40},
-            {-50, -40, -30, -30, -30, -30, -40, -50}
-    };
-    static final int[][] BLACK_KNIGHT_POS_VALUES = new int[8][8];
+    static final int[] WHITE_KNIGHT_POS_VALUES = {
+            -50, -40, -30, -30, -30, -30, -40, -50,
+            -40, -20, 0, 5, 5, 0, -20, -40,
+            -30, 5, 10, 15, 15, 10, 5, -30,
+            -30, 0, 15, 20, 20, 15, 0, -30,
+            -30, 5, 15, 20, 20, 15, 5, -30,
+            -30, 0, 10, 15, 15, 10, 0, -30,
+            -40, -20, 0, 0, 0, 0, -20, -40,
+            -50, -40, -30, -30, -30, -30, -40, -50};
+    static final int[] BLACK_KNIGHT_POS_VALUES = new int[64];
 
     static {
-        for (int i = 0; i < 8; i++) {
-            BLACK_KNIGHT_POS_VALUES[i] = Arrays.copyOf(WHITE_KNIGHT_POS_VALUES[7 - i], 8);
+        for (int i = 0; i < 64; i++) {
+            BLACK_KNIGHT_POS_VALUES[i] = WHITE_KNIGHT_POS_VALUES[63 - i];
         }
     }
 
-    static final int[][] WHITE_BISHOP_POS_VALUES = {
-            {-20, -10, -10, -10, -10, -10, -10, -20},
-            {-10, 0, 0, 0, 0, 0, 0, -10},
-            {-10, 0, 5, 10, 10, 5, 0, -10},
-            {-10, 5, 5, 10, 10, 5, 5, -10},
-            {-10, 0, 10, 10, 10, 10, 0, -10},
-            {-10, 10, 10, 10, 10, 10, 10, -10},
-            {-10, 5, 0, 0, 0, 0, 5, -10},
-            {-20, -10, -10, -10, -10, -10, -10, -20}};
-    static final int[][] BLACK_BISHOP_POS_VALUES = new int[8][8];
+    static final int[] WHITE_BISHOP_POS_VALUES = {
+            -20, -10, -10, -10, -10, -10, -10, -20,
+            -10, 5, 0, 0, 0, 0, 5, -10,
+            -10, 10, 10, 10, 10, 10, 10, -10,
+            -10, 0, 10, 10, 10, 10, 0, -10,
+            -10, 5, 5, 10, 10, 5, 5, -10,
+            -10, 0, 5, 10, 10, 5, 0, -10,
+            -10, 0, 0, 0, 0, 0, 0, -10,
+            -20, -10, -10, -10, -10, -10, -10, -20};
+    static final int[] BLACK_BISHOP_POS_VALUES = new int[64];
 
     static {
-        for (int i = 0; i < 8; i++) {
-            BLACK_BISHOP_POS_VALUES[i] = Arrays.copyOf(WHITE_BISHOP_POS_VALUES[7 - i], 8);
+        for (int i = 0; i < 64; i++) {
+            BLACK_BISHOP_POS_VALUES[i] = WHITE_BISHOP_POS_VALUES[63 - i];
         }
     }
 
-    static final int[][] WHITE_ROOK_POS_VALUES = {
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {5, 10, 10, 10, 10, 10, 10, 5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {-5, 0, 0, 0, 0, 0, 0, -5},
-            {0, 0, 0, 5, 5, 0, 0, 0}};
-    static final int[][] BLACK_ROOK_POS_VALUES = new int[8][8];
+    static final int[] WHITE_ROOK_POS_VALUES = {
+            0, 0, 5, 10, 10, 5, 0, 0,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            5, 10, 10, 10, 10, 10, 10, 5,
+            0, 0, 0, 0, 0, 0, 0, 0};
+    static final int[] BLACK_ROOK_POS_VALUES = new int[64];
 
     static {
-        for (int i = 0; i < 8; i++) {
-            BLACK_ROOK_POS_VALUES[i] = Arrays.copyOf(WHITE_ROOK_POS_VALUES[7 - i], 8);
+        for (int i = 0; i < 64; i++) {
+            BLACK_ROOK_POS_VALUES[i] = WHITE_ROOK_POS_VALUES[63 - i];
         }
     }
 
-    static final int[][] WHITE_QUEEN_POS_VALUES = {
-            {-20, -10, -10, -5, -5, -10, -10, -20},
-            {-10, 0, 0, 0, 0, 0, 0, -10},
-            {-10, 0, 5, 5, 5, 5, 0, -10},
-            {-5, 0, 5, 5, 5, 5, 0, -5},
-            {0, 0, 5, 5, 5, 5, 0, -5},
-            {-10, 5, 5, 5, 5, 5, 0, -10},
-            {-10, 0, 5, 0, 0, 0, 0, -10},
-            {-20, -10, -10, -5, -5, -10, -10, -20}};
+    static final int[] WHITE_QUEEN_POS_VALUES = {
+            -20, -10, -10, -5, -5, -10, -10, -20,
+            -10, 0, 5, 0, 0, 0, 0, -10,
+            -10, 5, 5, 5, 5, 5, 0, -10,
+            0, 0, 5, 5, 5, 5, 0, -5,
+            -5, 0, 5, 5, 5, 5, 0, -5,
+            -10, 0, 5, 5, 5, 5, 0, -10,
+            -10, 0, 0, 0, 0, 0, 0, -10,
+            -20, -10, -10, -5, -5, -10, -10, -20};
 
-    static final int[][] BLACK_QUEEN_POS_VALUES = new int[8][8];
+    static final int[] BLACK_QUEEN_POS_VALUES = new int[64];
 
     static {
-        for (int i = 0; i < 8; i++) {
-            BLACK_QUEEN_POS_VALUES[i] = Arrays.copyOf(WHITE_QUEEN_POS_VALUES[7 - i], 8);
+        for (int i = 0; i < 64; i++) {
+            BLACK_QUEEN_POS_VALUES[i] = WHITE_QUEEN_POS_VALUES[63 - i];
         }
     }
 
-    static final int[][] WHITE_KING_POS_VALUES = {
-            {20, 30, 10, 0, 0, 10, 30, 20},
-            {20, 20, 0, 0, 0, 0, 20, 20},
-            {-10, -20, -20, -20, -20, -20, -20, -10},
-            {-20, -30, -30, -40, -40, -30, -30, -20},
-            {-30, -40, -40, -50, -50, -40, -40, -30},
-            {-30, -40, -40, -50, -50, -40, -40, -30},
-            {-30, -40, -40, -50, -50, -40, -40, -30},
-            {-30, -40, -40, -50, -50, -40, -40, -30}};
-    static final int[][] BLACK_KING_POS_VALUES = new int[8][8];
+    static final int[] WHITE_KING_POS_VALUES = {
+            20, 30, 10, 0, 0, 10, 30, 20,
+            20, 20, 0, 0, 0, 0, 20, 20,
+            -10, -20, -20, -20, -20, -20, -20, -10,
+            -20, -30, -30, -40, -40, -30, -30, -20,
+            -30, -40, -40, -50, -50, -40, -40, -30,
+            -30, -40, -40, -50, -50, -40, -40, -30,
+            -30, -40, -40, -50, -50, -40, -40, -30,
+            -30, -40, -40, -50, -50, -40, -40, -30};
+    static final int[] BLACK_KING_POS_VALUES = new int[64];
 
     static {
-        for (int i = 0; i < 8; i++) {
-            BLACK_KING_POS_VALUES[i] = Arrays.copyOf(WHITE_KING_POS_VALUES[7 - i], 8);
+        for (int i = 0; i < 64; i++) {
+            BLACK_KING_POS_VALUES[i] = WHITE_KING_POS_VALUES[63 - i];
         }
     }
 
@@ -851,6 +849,7 @@ class BitBoards {
 
     /**
      * Called when making a move and updating the game status
+     * TODO: Fix bug where white and black pieces overlap
      *
      * @param move move to make
      * @return new state
@@ -858,7 +857,8 @@ class BitBoards {
     BitBoards makeMove(Move move) {
         BitBoards newState = tryMove(move);
         if ((newState.whitePieces & newState.blackPieces) != 0) {
-            throw new IllegalStateException("White and black pieces overlap\n" + this);
+            throw new IllegalStateException(String.format("%s caused white and black pieces " +
+                    "to overlap from %s to %s", move, this, newState));
         }
 
         updateGameStatus(newState);
@@ -981,17 +981,18 @@ class BitBoards {
         long startBitboard = SQUARE_TO_BITBOARD[start];
         int end = move.end();
         long endBitboard = SQUARE_TO_BITBOARD[end];
+        long moveBitboard = startBitboard | endBitboard;
         if (newState.whiteToMove) {
-            newState.whitePawns ^= startBitboard | endBitboard;
-            newState.whitePieces ^= startBitboard | endBitboard;
-            newState.allPieces ^= startBitboard | endBitboard;
+            newState.whitePawns ^= moveBitboard;
+            newState.whitePieces ^= moveBitboard;
+            newState.allPieces ^= moveBitboard;
             newState.blackPawns ^= SQUARE_TO_BITBOARD[end - 8];
             newState.blackPieces ^= SQUARE_TO_BITBOARD[end - 8];
             newState.allPieces ^= SQUARE_TO_BITBOARD[end - 8];
         } else {
-            newState.blackPawns ^= startBitboard | endBitboard;
-            newState.blackPieces ^= startBitboard | endBitboard;
-            newState.allPieces ^= startBitboard | endBitboard;
+            newState.blackPawns ^= moveBitboard;
+            newState.blackPieces ^= moveBitboard;
+            newState.allPieces ^= moveBitboard;
             newState.whitePawns ^= SQUARE_TO_BITBOARD[end + 8];
             newState.whitePieces ^= SQUARE_TO_BITBOARD[end + 8];
             newState.allPieces ^= SQUARE_TO_BITBOARD[end + 8];
@@ -1247,7 +1248,7 @@ class BitBoards {
     }
 
     /**
-     * TODO: Implement
+     * TODO: Optimize this
      * Precondition: The game is not over
      *
      * @return value of the board
@@ -1255,32 +1256,31 @@ class BitBoards {
     private int evaluateBoardNormal() {
         int score = 0;
         for (int i = 0; i < 64; i++) {
-            int row = i / 8, col = i % 8;
             long positionBitboard = SQUARE_TO_BITBOARD[i];
             if ((whitePawns & positionBitboard) != 0) {
-                score += PAWN_VAL + WHITE_PAWN_POS_VALUES[row][col];
+                score += PAWN_VAL + WHITE_PAWN_POS_VALUES[i];
             } else if ((whiteRooks & positionBitboard) != 0) {
-                score += ROOK_VAL + WHITE_ROOK_POS_VALUES[row][col];
+                score += ROOK_VAL + WHITE_ROOK_POS_VALUES[i];
             } else if ((whiteKnights & positionBitboard) != 0) {
-                score += KNIGHT_VAL + WHITE_KNIGHT_POS_VALUES[row][col];
+                score += KNIGHT_VAL + WHITE_KNIGHT_POS_VALUES[i];
             } else if ((whiteBishops & positionBitboard) != 0) {
-                score += BISHOP_VAL + WHITE_BISHOP_POS_VALUES[row][col];
+                score += BISHOP_VAL + WHITE_BISHOP_POS_VALUES[i];
             } else if ((whiteQueens & positionBitboard) != 0) {
-                score += QUEEN_VAL + WHITE_QUEEN_POS_VALUES[row][col];
+                score += QUEEN_VAL + WHITE_QUEEN_POS_VALUES[i];
             } else if ((whiteKing & positionBitboard) != 0) {
-                score += KING_VAL + WHITE_KING_POS_VALUES[row][col];
+                score += KING_VAL + WHITE_KING_POS_VALUES[i];
             } else if ((blackPawns & positionBitboard) != 0) {
-                score -= PAWN_VAL + BLACK_PAWN_POS_VALUES[row][col];
+                score -= PAWN_VAL + BLACK_PAWN_POS_VALUES[i];
             } else if ((blackRooks & positionBitboard) != 0) {
-                score -= ROOK_VAL + BLACK_ROOK_POS_VALUES[row][col];
+                score -= ROOK_VAL + BLACK_ROOK_POS_VALUES[i];
             } else if ((blackKnights & positionBitboard) != 0) {
-                score -= KNIGHT_VAL + BLACK_KNIGHT_POS_VALUES[row][col];
+                score -= KNIGHT_VAL + BLACK_KNIGHT_POS_VALUES[i];
             } else if ((blackBishops & positionBitboard) != 0) {
-                score -= BISHOP_VAL + BLACK_BISHOP_POS_VALUES[row][col];
+                score -= BISHOP_VAL + BLACK_BISHOP_POS_VALUES[i];
             } else if ((blackQueens & positionBitboard) != 0) {
-                score -= QUEEN_VAL + BLACK_QUEEN_POS_VALUES[row][col];
+                score -= QUEEN_VAL + BLACK_QUEEN_POS_VALUES[i];
             } else if ((blackKing & positionBitboard) != 0) {
-                score -= KING_VAL + BLACK_KING_POS_VALUES[row][col];
+                score -= KING_VAL + BLACK_KING_POS_VALUES[i];
             }
         }
 
