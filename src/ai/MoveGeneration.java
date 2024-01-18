@@ -105,8 +105,7 @@ public class MoveGeneration {
             enPassant &= friendlyPawns;
             while (enPassant != 0) {
                 int start = Long.numberOfTrailingZeros(enPassant);
-                int end = state.enPassantIndex;
-                moves[index++] = new Move(start, end, Move.MoveType.EN_PASSANT, PAWN);
+                moves[index++] = new Move(start, state.enPassantIndex, Move.MoveType.EN_PASSANT, PAWN);
                 enPassant ^= SQUARE_TO_BITBOARD[start];
             }
         }
@@ -133,7 +132,6 @@ public class MoveGeneration {
 
     private static int addPawnMove(Move[] moves, int index, int start, int end, boolean white,
                                    boolean doubleMove, BitBoards state) {
-        Move move;
         boolean at_end = (white && (SQUARE_TO_BITBOARD[end] & RANK_8) != 0) || (!white && (SQUARE_TO_BITBOARD[end] & RANK_1) != 0);
         if (at_end) {
             for (Move.MoveType moveType : Move.MoveType.PROMOTION_TYPES) {

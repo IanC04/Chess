@@ -830,7 +830,7 @@ class BitBoards {
      * @return new state
      */
     BitBoards tryMove(Move move) {
-        System.out.println("Trying move: " + move);
+        // System.out.println("Trying move: " + move);
         BitBoards newState = switch (move.moveType()) {
             case NORMAL -> tryMoveNormal(move);
             case EN_PASSANT -> tryMoveEnPassant(move);
@@ -857,8 +857,11 @@ class BitBoards {
     BitBoards makeMove(Move move) {
         BitBoards newState = tryMove(move);
         if ((newState.whitePieces & newState.blackPieces) != 0) {
-            throw new IllegalStateException(String.format("%s caused white and black pieces " +
-                    "to overlap from %s to %s", move, this, newState));
+            throw new IllegalStateException(String.format("""
+                    %s caused white and black pieces to overlap from
+                    %s
+                    to
+                    %s""", move, this, newState));
         }
 
         updateGameStatus(newState);
@@ -925,7 +928,10 @@ class BitBoards {
             if ((newState.blackPieces & endBitboard) != 0) {
                 newState.halfMoveClock = 0;
                 newState.blackPawns &= ~endBitboard;
-                newState.blackRooks &= ~endBitboard;
+                if ((newState.blackRooks & endBitboard) != 0) {
+                    newState.castleRights &= move.end() == H8 ? 0b0111 : 0b1011;
+                    newState.blackRooks &= ~endBitboard;
+                }
                 newState.blackKnights &= ~endBitboard;
                 newState.blackBishops &= ~endBitboard;
                 newState.blackQueens &= ~endBitboard;
@@ -953,7 +959,10 @@ class BitBoards {
             if ((newState.whitePieces & endBitboard) != 0) {
                 newState.halfMoveClock = 0;
                 newState.whitePawns &= ~endBitboard;
-                newState.whiteRooks &= ~endBitboard;
+                if ((newState.whiteRooks & endBitboard) != 0) {
+                    newState.castleRights &= move.end() == H1 ? 0b1101 : 0b1110;
+                    newState.whiteRooks &= ~endBitboard;
+                }
                 newState.whiteKnights &= ~endBitboard;
                 newState.whiteBishops &= ~endBitboard;
                 newState.whiteQueens &= ~endBitboard;
@@ -1091,6 +1100,9 @@ class BitBoards {
         }
         newState.allPieces ^= moveBitboard;
         newState.halfMoveClock = 0;
+        if ((SQUARE_TO_BITBOARD[newState.enPassantIndex] & RANK_3 | SQUARE_TO_BITBOARD[newState.enPassantIndex] & RANK_6) == 0) {
+            throw new IllegalStateException("Unexpected en passant index: " + newState.enPassantIndex);
+        }
 
         return newState;
     }
@@ -1116,6 +1128,11 @@ class BitBoards {
                     throw new IllegalStateException("Unexpected black pawn at promotion square");
                 }
 
+                if (move.end() == H8) {
+                    newState.castleRights &= 0b0111;
+                } else if (move.end() == A8) {
+                    newState.castleRights &= 0b1011;
+                }
                 newState.blackRooks ^= endBitboard;
                 newState.blackKnights ^= endBitboard;
                 newState.blackBishops ^= endBitboard;
@@ -1139,6 +1156,11 @@ class BitBoards {
                     throw new IllegalStateException("Unexpected white pawn at promotion square");
                 }
 
+                if (move.end() == H1) {
+                    newState.castleRights &= 0b1101;
+                } else if (move.end() == A1) {
+                    newState.castleRights &= 0b1110;
+                }
                 newState.whiteRooks ^= endBitboard;
                 newState.whiteKnights ^= endBitboard;
                 newState.whiteBishops ^= endBitboard;
@@ -1147,6 +1169,7 @@ class BitBoards {
             }
         }
         newState.allPieces ^= startBitboard | endBitboard;
+        newState.enPassantIndex = -1;
 
         return newState;
     }
@@ -1284,7 +1307,24 @@ class BitBoards {
             }
         }
 
-        return score;
+        return whiteToMove ? score : -score;
+    }
+
+    static void displayLongToBitboard(long bitBoard) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 7; i >= 0; --i) {
+            for (int j = 0; j < 8; ++j) {
+                long position = 1L << (8 * i + j);
+                if ((bitBoard & position) != 0) {
+                    sb.append("1");
+                } else {
+                    sb.append("0");
+                }
+            }
+            sb.append("\n");
+        }
+
+        System.out.println(sb.toString());
     }
 
 
@@ -1296,31 +1336,31 @@ class BitBoards {
             for (int j = 0; j < 8; ++j) {
                 long position = 1L << (8 * i + j);
                 if ((whitePawns & position) != 0) {
-                    sb.append("P");
+                    sb.append('P');
                 } else if ((whiteKnights & position) != 0) {
-                    sb.append("N");
+                    sb.append('N');
                 } else if ((whiteBishops & position) != 0) {
-                    sb.append("B");
+                    sb.append('B');
                 } else if ((whiteRooks & position) != 0) {
-                    sb.append("R");
+                    sb.append('R');
                 } else if ((whiteQueens & position) != 0) {
-                    sb.append("Q");
+                    sb.append('Q');
                 } else if ((whiteKing & position) != 0) {
-                    sb.append("K");
+                    sb.append('K');
                 } else if ((blackPawns & position) != 0) {
-                    sb.append("p");
+                    sb.append('p');
                 } else if ((blackKnights & position) != 0) {
-                    sb.append("n");
+                    sb.append('n');
                 } else if ((blackBishops & position) != 0) {
-                    sb.append("b");
+                    sb.append('b');
                 } else if ((blackRooks & position) != 0) {
-                    sb.append("r");
+                    sb.append('r');
                 } else if ((blackQueens & position) != 0) {
-                    sb.append("q");
+                    sb.append('q');
                 } else if ((blackKing & position) != 0) {
-                    sb.append("k");
+                    sb.append('k');
                 } else {
-                    sb.append(" ");
+                    sb.append('.');
                 }
             }
             sb.append("\n");

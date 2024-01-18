@@ -7,16 +7,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
-public class Minimax {
+public class NegaMax {
     private final HashMap<String, Move[]> OPENING_BOOK;
 
     // TODO: Implement transposition table
     private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
 
-    public Minimax() {
+    public NegaMax() {
         this.OPENING_BOOK = new HashMap<>();
         parseOpeningBook();
-        // parseMagicBitBoards();
     }
 
     private void parseOpeningBook() {
@@ -83,7 +82,7 @@ public class Minimax {
             return openingMove;
         }
         BitBoards state = new BitBoards(FEN);
-        Move bestMove = rootNegaMax(state, 5, Integer.MIN_VALUE, Integer.MAX_VALUE,
+        Move bestMove = rootNegaMax(state, 7, Integer.MIN_VALUE, Integer.MAX_VALUE,
                 state.whiteToMove);
         if (bestMove == null) {
             throw new IllegalStateException("No move found");
