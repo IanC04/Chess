@@ -1,6 +1,6 @@
 package logic;
 
-import ai.Minimax;
+import ai.NegaMax;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,7 +24,7 @@ public class Board {
     // How many moves both players have made since the last pawn advance or piece capture
     private int lastHalfMove;
     // AI minimax algorithm
-    private final Minimax ai;
+    private final NegaMax ai;
     // Player statuses
     private final PlayerStatus whiteStatus;
     private final PlayerStatus blackStatus;
@@ -72,7 +72,7 @@ public class Board {
         Board.INITIALIZED = true;
 
         this.CHESS_BOARD = new Piece[8][8];
-        this.ai = new Minimax();
+        this.ai = new NegaMax();
         this.whiteStatus = new PlayerStatus(WHITE);
         this.blackStatus = new PlayerStatus(BLACK);
         this.gameStates = new ArrayList<>();
@@ -611,9 +611,10 @@ public class Board {
         Notation destination = Notation.valueOf(move.substring(2, 4).toUpperCase());
         Piece originalPiece = getPiece(start);
 
+        String enPassant =
+                this.gameStates.get(this.gameStates.size() - 1).split(" ")[3];
         // En passant
-        if (originalPiece.T() == PAWN && destination.equals(Notation.get(start.getPosition()[0] + (originalPiece.C() == WHITE ? 1 : -1),
-                destination.getPosition()[1]))) {
+        if (!enPassant.equals("-") && originalPiece.T() == PAWN && destination.equals(Notation.valueOf(enPassant.toUpperCase()))) {
             movePiece(new Move(start, destination, Move.MoveType.EN_PASSANT));
         }
         // Promotion

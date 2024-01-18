@@ -184,6 +184,19 @@ class UIBoard extends JPanel {
         }
     }
 
+    private void highlightKing() {
+        int status = logicBoard.gameStatus();
+        Notation kingPos = logicBoard.getKing(logicBoard.currentPlayerColor);
+        byte[] kingPosArr = kingPos.getPosition();
+        switch (status) {
+            case 0, 2 ->
+                    squares[kingPosArr[0]][kingPosArr[1]].setBackground((kingPosArr[0] + kingPosArr[1]) % 2 == 0 ?
+                            LIGHT_SQUARE : DARK_SQUARE);
+            case 1, 3 -> squares[kingPosArr[0]][kingPosArr[1]].setBackground(HIGHLIGHT_CHECK);
+            default -> throw new IllegalStateException("Invalid game status");
+        }
+    }
+
     /**
      * Updates the graphical board
      */
@@ -198,6 +211,7 @@ class UIBoard extends JPanel {
 
         if (ai.aiPlayer && logicBoard.currentPlayerColor == ai.aiColor) {
             logicBoard.aiMove();
+            highlightKing();
             updateBoard();
         }
     }
@@ -241,16 +255,13 @@ class UIBoard extends JPanel {
                 System.out.println("Captured: " + captured);
                 Notation afterMove = logicBoard.getKing(logicBoard.currentPlayerColor);
                 byte[] afterMoveArr = afterMove.getPosition();
+                squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(afterMoveArr[0] + afterMoveArr[1] % 2 == 0 ?
+                        LIGHT_SQUARE : DARK_SQUARE);
+                highlightKing();
                 boolean gameOver = switch (logicBoard.gameStatus()) {
-                    case 0:
+                    case 0, 1:
                         yield false;
-                    case 1:
-                        squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(HIGHLIGHT_CHECK);
-                        yield false;
-                    case 2:
-                        yield true;
-                    case 3:
-                        squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(HIGHLIGHT_CHECK);
+                    case 2, 3:
                         yield true;
                     default:
                         throw new IllegalStateException("Invalid game status");
