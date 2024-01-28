@@ -7,11 +7,17 @@ package ui;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.Set;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 import javax.swing.*;
+
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.stage.DirectoryChooser;
 
 import logic.Board;
 import logic.Move;
@@ -19,11 +25,16 @@ import logic.Notation;
 import logic.Piece;
 
 public class Game extends JFrame {
+    /**
+     * <a href="https://stackoverflow.com/questions/57620350/how-to-fix-exception-when-creating-jfxpanel-in-swing-with-javafx-12">StackOverflow</a>
+     */
+    private final JFXPanel jfxPanel;
     private final UIStatusBar uiStatusBar;
     private final UIBoard uiBoard;
     private final UIToolBar uiToolBar;
 
     private Game() {
+        jfxPanel = new JFXPanel(); // Initializes JavaFX environment
         // Initialize final variables
         uiStatusBar = new UIStatusBar();
         uiBoard = new UIBoard(uiStatusBar, new GridLayout(0, 9));
@@ -151,6 +162,7 @@ class UIBoard extends JPanel {
         ai.resetAI();
         resetBoardBackground();
         updateBoard();
+        setEnabled(true);
     }
 
     void resignGame() {
@@ -173,6 +185,29 @@ class UIBoard extends JPanel {
         uiStatusBar.setStatus(String.format("AI Player %s with color=%s", ai.aiPlayer ?
                 "enabled" : "disabled", ai.aiColor));
         updateBoard();
+    }
+
+    void downloadStates() {
+        List<String> currentStates = logicBoard.getGameStates();
+        String fileName =
+                LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
+
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        File saveDirectory = directoryChooser.showDialog(null);
+        if (saveDirectory == null || !saveDirectory.isDirectory()) {
+            System.out.println("Invalid save directory");
+        } else {
+            System.out.println("Saving to " + saveDirectory.getAbsolutePath());
+            try (FileOutputStream fos =
+                         new FileOutputStream(String.format("%s/%s.txt", saveDirectory, fileName))) {
+                for (String state : currentStates) {
+                    fos.write(state.getBytes());
+                    fos.write("\n".getBytes());
+                }
+            } catch (Exception e) {
+                System.err.println("Error writing to file: " + e.getMessage());
+            }
+        }
     }
 
     private void resetBoardBackground() {
@@ -268,16 +303,14 @@ class UIBoard extends JPanel {
                 };
                 if (gameOver) {
                     uiStatusBar.setStatus("Game Over");
-                    // Causes IllegalStateException for thread not owner
                     uiStatusBar.setStatus(String.format("%s wins!",
                             Piece.PieceColor.opposite(logicBoard.currentPlayerColor)));
-                    wait(1_000);
-                    resetGame();
+                    System.out.println("Game Over");
+                    // User can still click but no action will be taken
+                    setEnabled(false);
                 }
             } catch (IllegalArgumentException e) {
                 System.err.println("Bad argument: " + e.getMessage());
-            } catch (InterruptedException e) {
-                System.err.println("Interrupt: " + e.getMessage());
             } catch (IllegalStateException e) {
                 System.err.println("Probably wait error: " + e.getMessage());
             }
@@ -356,6 +389,8 @@ class UIToolBar extends JToolBar {
         addSeparator();
         addButtonToToolbar(this, "AI", e -> this.toggleAI());
         this.buttons.get("AI").setBackground(Color.RED);
+        addButtonToToolbar(this, "Download",
+                e -> Platform.runLater(() -> uiBoard.downloadStates()));
     }
 
     private void addButtonToToolbar(final JToolBar toolBar, final String buttonText,

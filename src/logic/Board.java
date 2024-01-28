@@ -2,10 +2,7 @@ package logic;
 
 import ai.NegaMax;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static logic.Notation.*;
@@ -597,7 +594,7 @@ public class Board {
     }
 
     public void aiMove() {
-        String FEN = gameStates.get(gameStates.size() - 1);
+        String FEN = this.gameStates.getLast();
         System.out.println(FEN);
         if (FEN.isBlank()) {
             throw new IllegalStateException("Invalid FEN");
@@ -611,8 +608,7 @@ public class Board {
         Notation destination = Notation.valueOf(move.substring(2, 4).toUpperCase());
         Piece originalPiece = getPiece(start);
 
-        String enPassant =
-                this.gameStates.get(this.gameStates.size() - 1).split(" ")[3];
+        String enPassant = FEN.split(" ")[3];
         // En passant
         if (!enPassant.equals("-") && originalPiece.T() == PAWN && destination.equals(Notation.valueOf(enPassant.toUpperCase()))) {
             movePiece(new Move(start, destination, Move.MoveType.EN_PASSANT));
@@ -634,6 +630,15 @@ public class Board {
         } else {
             movePiece(new Move(start, destination, Move.MoveType.NORMAL));
         }
+    }
+
+    /**
+     * Returns the stored game states
+     *
+     * @return a list of all game states as a copy
+     */
+    public List<String> getGameStates() {
+        return new ArrayList<>(gameStates);
     }
 
     /**
