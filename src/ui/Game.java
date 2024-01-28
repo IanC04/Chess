@@ -85,6 +85,7 @@ class UIBoard extends JPanel {
     private final AIStatus ai;
     // true if board is in white POV, false if board is in black POV
     private boolean boardPOV;
+
     private static final class AIStatus {
         private boolean aiPlayer;
         private Piece.PieceColor aiColor;
@@ -99,6 +100,7 @@ class UIBoard extends JPanel {
         }
 
     }
+
     private final Selection selection;
 
     private static final class Selection {
@@ -116,6 +118,8 @@ class UIBoard extends JPanel {
 
     UIBoard(UIStatusBar uiStatusBar, GridLayout gridLayout) {
         super(gridLayout);
+        setPreferredSize(new Dimension(720, 720));
+
         this.uiStatusBar = uiStatusBar;
         this.logicBoard = new Board();
         this.squares = new JButton[8][8];
@@ -125,6 +129,7 @@ class UIBoard extends JPanel {
         this.selection.reset();
         initializeBoard();
     }
+
     private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
     private static final Color DARK_SQUARE = new Color(181, 136, 99);
     private static final Color HIGHLIGHT_LEGAL = Color.GREEN;
@@ -305,6 +310,7 @@ class UIBoard extends JPanel {
 
     /**
      * TODO: Fix this
+     *
      * @param color true if board is in white POV, false if board is in black POV
      */
     private void setBoardView(boolean color) {
