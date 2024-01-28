@@ -1,6 +1,7 @@
 package ai;
 
 import java.util.Arrays;
+import java.util.Comparator;
 
 import static ai.BitBoards.*;
 import static ai.Move.PieceType.*;
@@ -18,7 +19,7 @@ public class MoveGeneration {
      * @param state current state
      * @return all legal moves
      */
-    static Move[] generateLegalMoves(BitBoards state) {
+    private static Move[] generateLegalMoves(BitBoards state) {
         Move[] moves = generateMoves(state);
         int index = 0;
         for (Move move : moves) {
@@ -27,7 +28,17 @@ public class MoveGeneration {
             }
         }
 
+        // Truncates array
         return Arrays.copyOf(moves, index);
+    }
+
+    static Move[] generateSortedLegalMoves(BitBoards state) {
+        Move[] legalMoves = generateLegalMoves(state);
+
+        // Negative since the highest value, aka best, should be first
+        Arrays.sort(legalMoves,
+                Comparator.comparingInt(m -> -Move.movePositionValue(m, state.whiteToMove)));
+        return legalMoves;
     }
 
 

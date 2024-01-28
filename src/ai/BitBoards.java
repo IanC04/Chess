@@ -1310,23 +1310,23 @@ class BitBoards {
         return whiteToMove ? score : -score;
     }
 
-    static void displayLongToBitboard(long bitBoard) {
+    static String displayLongAsBitboard(long bitBoard) {
         StringBuilder sb = new StringBuilder();
         for (int i = 7; i >= 0; --i) {
             for (int j = 0; j < 8; ++j) {
                 long position = 1L << (8 * i + j);
                 if ((bitBoard & position) != 0) {
-                    sb.append("1");
+                    sb.append('1');
                 } else {
-                    sb.append("0");
+                    sb.append('0');
                 }
             }
-            sb.append("\n");
+            sb.append('\n');
         }
-
         System.out.println(sb.toString());
-    }
 
+        return sb.toString();
+    }
 
     @Override
     public String toString() {

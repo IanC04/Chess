@@ -101,6 +101,32 @@ record Move(int start, int end, MoveType moveType, PieceType pieceType, int valu
                 state.blackKing));
     }
 
+    // How far the squareIndex is from the center of the board, TODO: currently unused
+    private static final int[] DISTANCE_TO_CENTER = {3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 3, 3, 2, 1, 1, 1, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3, 3, 2, 1, 1, 1, 1, 2, 3, 3, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3};
+
+    static int movePositionValue(Move move, boolean white) {
+        if (white) {
+            return switch (move.pieceType) {
+                case PAWN -> WHITE_PAWN_POS_VALUES[move.end] - WHITE_PAWN_POS_VALUES[move.start];
+                case ROOK -> WHITE_ROOK_POS_VALUES[move.end] - WHITE_ROOK_POS_VALUES[move.start];
+                case KNIGHT -> WHITE_KNIGHT_POS_VALUES[move.end] - WHITE_KNIGHT_POS_VALUES[move.start];
+                case BISHOP -> WHITE_BISHOP_POS_VALUES[move.end] - WHITE_BISHOP_POS_VALUES[move.start];
+                case QUEEN -> WHITE_QUEEN_POS_VALUES[move.end] - WHITE_QUEEN_POS_VALUES[move.start];
+                case KING -> WHITE_KING_POS_VALUES[move.end] - WHITE_KING_POS_VALUES[move.start];
+                default -> throw new IllegalStateException("Unexpected value: " + move.pieceType);
+            };
+        }
+        return switch (move.pieceType) {
+            case PAWN -> BLACK_PAWN_POS_VALUES[move.end] - BLACK_PAWN_POS_VALUES[move.start];
+            case ROOK -> BLACK_ROOK_POS_VALUES[move.end] - BLACK_ROOK_POS_VALUES[move.start];
+            case KNIGHT -> BLACK_KNIGHT_POS_VALUES[move.end] - BLACK_KNIGHT_POS_VALUES[move.start];
+            case BISHOP -> BLACK_BISHOP_POS_VALUES[move.end] - BLACK_BISHOP_POS_VALUES[move.start];
+            case QUEEN -> BLACK_QUEEN_POS_VALUES[move.end] - BLACK_QUEEN_POS_VALUES[move.start];
+            case KING -> BLACK_KING_POS_VALUES[move.end] - BLACK_KING_POS_VALUES[move.start];
+            default -> throw new IllegalStateException("Unexpected value: " + move.pieceType);
+        };
+    }
+
     @Override
     public String toString() {
         if (start == -1 || end == -1 || moveType == MoveType.ERROR) {

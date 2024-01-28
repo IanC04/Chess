@@ -50,6 +50,10 @@ public class NegaMax {
         }
     }
 
+    private String removeMoveCounter(String FEN) {
+        return FEN.substring(0, FEN.substring(0, FEN.lastIndexOf(' ')).lastIndexOf(' '));
+    }
+
     private String checkOpeningBook(String FEN) {
         // Opening moves
         String bookKey = removeMoveCounter(FEN);
@@ -90,10 +94,6 @@ public class NegaMax {
         return bestMove.toString();
     }
 
-    private String removeMoveCounter(String FEN) {
-        return FEN.substring(0, FEN.substring(0, FEN.lastIndexOf(' ')).lastIndexOf(' '));
-    }
-
     /**
      * Recursive minimax algorithm
      *
@@ -107,14 +107,18 @@ public class NegaMax {
             throw new IllegalArgumentException("Depth must be greater than 0");
         }
 
-        Move[] allMoves = MoveGeneration.generateLegalMoves(state);
+        Move[] allMoves = MoveGeneration.generateSortedLegalMoves(state);
         Move bestMove = new Move();
         for (Move move : allMoves) {
             BitBoards newState = state.makeMove(move);
-            int score = -negaMax(newState, depth - 1, -beta, -alpha, !color);
-            if (score > bestMove.value()) {
+            int value = -negaMax(newState, depth - 1, -beta, -alpha, !color);
+            if (value > bestMove.value()) {
                 bestMove = new Move(move.start(), move.end(), move.moveType(),
-                        move.pieceType(), score);
+                        move.pieceType(), value);
+            }
+            alpha = Math.max(value, alpha);
+            if (alpha >= beta) {
+                break;
             }
         }
         return bestMove;
@@ -122,7 +126,7 @@ public class NegaMax {
 
     /**
      * Recursive negamax algorithm
-     * TODO: Fix algorithm
+     * TODO: Add transposition table
      *
      * @param state current state
      * @param depth current depth
@@ -136,7 +140,7 @@ public class NegaMax {
             return state.evaluateBoard();
         }
 
-        Move[] allMoves = MoveGeneration.generateLegalMoves(state);
+        Move[] allMoves = MoveGeneration.generateSortedLegalMoves(state);
         int bestValue = Integer.MIN_VALUE;
         for (Move move : allMoves) {
             int value = -negaMax(state.makeMove(move), depth - 1, -beta, -alpha, !color);
