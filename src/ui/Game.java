@@ -1,8 +1,3 @@
-/*
-    Written by Ian Chen on 11/22/2023
-    GitHub: https://github.com/IanC04
- */
-
 package ui;
 
 import java.awt.*;
@@ -24,6 +19,11 @@ import logic.Move;
 import logic.Notation;
 import logic.Piece;
 
+/**
+ * @author Ian Chen
+ * @version 1.0
+ * @see <a href="https://github.com/IanC04">My GitHub</a>
+ */
 public class Game extends JFrame {
     /**
      * <a href="https://stackoverflow.com/questions/57620350/how-to-fix-exception-when-creating-jfxpanel-in-swing-with-javafx-12">StackOverflow</a>
@@ -82,20 +82,9 @@ class UIBoard extends JPanel {
     private final Board logicBoard;
     private final JButton[][] squares;
 
-    private static final class Selection {
-        private Piece currentlySelectedPiece;
-        private Notation squareSelected;
-        private Set<Move> currentGreenSquares;
-
-        void reset() {
-            currentlySelectedPiece = null;
-            squareSelected = null;
-            currentGreenSquares = null;
-        }
-    }
-
-    private final Selection selection;
-
+    private final AIStatus ai;
+    // true if board is in white POV, false if board is in black POV
+    private boolean boardPOV;
     private static final class AIStatus {
         private boolean aiPlayer;
         private Piece.PieceColor aiColor;
@@ -108,13 +97,22 @@ class UIBoard extends JPanel {
         private void resetAI() {
             aiColor = Math.random() >= 0.5 ? Piece.PieceColor.WHITE : Piece.PieceColor.BLACK;
         }
-    }
 
-    private final AIStatus ai;
-    private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
-    private static final Color DARK_SQUARE = new Color(181, 136, 99);
-    private static final Color HIGHLIGHT_LEGAL = Color.GREEN;
-    private static final Color HIGHLIGHT_CHECK = Color.RED;
+    }
+    private final Selection selection;
+
+    private static final class Selection {
+        private Piece currentlySelectedPiece;
+        private Notation squareSelected;
+        private Set<Move> currentGreenSquares;
+
+        void reset() {
+            currentlySelectedPiece = null;
+            squareSelected = null;
+            currentGreenSquares = null;
+        }
+
+    }
 
     UIBoard(UIStatusBar uiStatusBar, GridLayout gridLayout) {
         super(gridLayout);
@@ -122,10 +120,15 @@ class UIBoard extends JPanel {
         this.logicBoard = new Board();
         this.squares = new JButton[8][8];
         this.ai = new AIStatus();
+        this.boardPOV = true;
         this.selection = new Selection();
         this.selection.reset();
         initializeBoard();
     }
+    private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
+    private static final Color DARK_SQUARE = new Color(181, 136, 99);
+    private static final Color HIGHLIGHT_LEGAL = Color.GREEN;
+    private static final Color HIGHLIGHT_CHECK = Color.RED;
 
     private void initializeBoard() {
         for (int i = 7; i >= 0; --i) {
@@ -153,15 +156,41 @@ class UIBoard extends JPanel {
                     SwingConstants.CENTER));
         }
 
+        getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0),
+                "seePreviousMove");
+        getActionMap().put("seePreviousMove", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                seePreviousMove();
+            }
+        });
+
+        getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0),
+                "seeNextMove");
+        getActionMap().put("seeNextMove", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                seeNextMove();
+            }
+        });
+
         uiStatusBar.setStatus("Initialized board");
+    }
+
+    void seePreviousMove() {
+        System.out.println("Previous move");
+    }
+
+    void seeNextMove() {
+        System.out.println("Next move");
     }
 
     void resetGame() {
         uiStatusBar.setStatus("New Game");
         logicBoard.resetBoard();
         ai.resetAI();
-        resetBoardBackground();
-        updateBoard();
+        boardPOV = true;
+        updateBoardMove();
         setEnabled(true);
     }
 
@@ -184,25 +213,42 @@ class UIBoard extends JPanel {
         ai.aiPlayer = !ai.aiPlayer;
         uiStatusBar.setStatus(String.format("AI Player %s with color=%s", ai.aiPlayer ?
                 "enabled" : "disabled", ai.aiColor));
-        updateBoard();
+        updateBoardMove();
     }
 
     void downloadStates() {
         List<String> currentStates = logicBoard.getGameStates();
-        String fileName =
-                LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"));
 
         DirectoryChooser directoryChooser = new DirectoryChooser();
+        try {
+            directoryChooser.setInitialDirectory(new File(System.getProperty("user.home") +
+                    "/Downloads"));
+        } catch (Exception e) {
+            directoryChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        } finally {
+            directoryChooser.setTitle("Select Save Directory");
+        }
+
         File saveDirectory = directoryChooser.showDialog(null);
         if (saveDirectory == null || !saveDirectory.isDirectory()) {
             System.out.println("Invalid save directory");
         } else {
+            String fileName =
+                    String.format("%s/%s.txt", saveDirectory,
+                            LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern(
+                                    "yyyy-MM-dd_HH-mm-ss")));
             System.out.println("Saving to " + saveDirectory.getAbsolutePath());
             try (FileOutputStream fos =
-                         new FileOutputStream(String.format("%s/%s.txt", saveDirectory, fileName))) {
+                         new FileOutputStream(fileName)) {
                 for (String state : currentStates) {
                     fos.write(state.getBytes());
                     fos.write("\n".getBytes());
+                }
+                try {
+                    File file = new File(fileName);
+                    Desktop.getDesktop().open(file);
+                } catch (Exception e) {
+                    System.err.println("Error opening file: " + e.getMessage());
                 }
             } catch (Exception e) {
                 System.err.println("Error writing to file: " + e.getMessage());
@@ -235,23 +281,62 @@ class UIBoard extends JPanel {
     /**
      * Updates the graphical board
      */
-    private void updateBoard() {
+    private void updateBoardMove() {
         uiStatusBar.setStatus("Updating...");
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 squares[i][j].setText(Objects.requireNonNullElse(logicBoard.getPiece(i, j), "").toString());
             }
         }
-        uiStatusBar.setStatus(String.format("%s's turn", logicBoard.currentPlayerColor));
+        uiStatusBar.setStatus(String.format("%s to move", logicBoard.currentPlayerColor));
+
+        if (!ai.aiPlayer) {
+            // boardPOV = !boardPOV;
+            // setBoardView(boardPOV);
+            return;
+        }
 
         if (ai.aiPlayer && logicBoard.currentPlayerColor == ai.aiColor) {
             logicBoard.aiMove();
             highlightKing();
-            updateBoard();
+            updateBoardMove();
         }
     }
 
+    /**
+     * TODO: Fix this
+     * @param color true if board is in white POV, false if board is in black POV
+     */
+    private void setBoardView(boolean color) {
+        System.out.println("Setting board view");
+        if (color) {
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    squares[i][j].setText(Objects.requireNonNullElse(logicBoard.getPiece(i,
+                            j), "").toString());
+                    squares[i][j].setBackground((i + j) % 2 == 0 ?
+                            LIGHT_SQUARE : DARK_SQUARE);
+                }
+            }
+        } else {
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    squares[7 - i][7 - j].setText(Objects.requireNonNullElse(logicBoard.getPiece(i,
+                            j), "").toString());
+                    squares[7 - i][7 - j].setBackground((i + j) % 2 == 1 ? LIGHT_SQUARE :
+                            DARK_SQUARE);
+                }
+            }
+        }
+    }
+
+    /**
+     * @param notation the position of the square clicked
+     */
     private void manageClick(Notation notation) {
+        if (!boardPOV) {
+            notation = notation.flip();
+        }
         Piece selectedPiece = logicBoard.getPiece(notation);
         if (selectedPiece == null || selectedPiece.C() != logicBoard.currentPlayerColor) {
             if (selection.currentGreenSquares != null && selection.currentGreenSquares.stream().map(Move::end).anyMatch(notation::equals)) {
@@ -262,7 +347,6 @@ class UIBoard extends JPanel {
             resetGreenSquares();
             displayMoves(selectedPiece, notation);
         }
-        updateBoard();
     }
 
     private void makeMove(Notation endPos) {
@@ -278,6 +362,7 @@ class UIBoard extends JPanel {
         if (selectedMove != null) {
             uiStatusBar.setStatus("Move " + selectedMove);
             try {
+                // Reset king background color
                 Notation beforeMove = logicBoard.getKing(logicBoard.currentPlayerColor);
                 byte[] beforeMoveArr = beforeMove.getPosition();
                 squares[beforeMoveArr[0]][beforeMoveArr[1]].setBackground((beforeMoveArr[0] + beforeMoveArr[1]) % 2 == 0 ?
@@ -292,6 +377,7 @@ class UIBoard extends JPanel {
                 byte[] afterMoveArr = afterMove.getPosition();
                 squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(afterMoveArr[0] + afterMoveArr[1] % 2 == 0 ?
                         LIGHT_SQUARE : DARK_SQUARE);
+                updateBoardMove();
                 highlightKing();
                 boolean gameOver = switch (logicBoard.gameStatus()) {
                     case 0, 1:
@@ -314,6 +400,8 @@ class UIBoard extends JPanel {
             } catch (IllegalStateException e) {
                 System.err.println("Probably wait error: " + e.getMessage());
             }
+        } else {
+            throw new IllegalStateException("Invalid move");
         }
     }
 

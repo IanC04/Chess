@@ -31,4 +31,8 @@ public enum Notation {
         }
         return Notation.ALL_VALUES[r * 8 + c];
     }
+
+    public Notation flip() {
+        return Notation.ALL_VALUES[63 - this.ordinal()];
+    }
 }

@@ -26,7 +26,9 @@ public class Board {
     private final PlayerStatus whiteStatus;
     private final PlayerStatus blackStatus;
     // Game positions through each game
-    private final ArrayList<String> gameStates;
+    private final ArrayList<GameState> gameStates;
+
+    private record GameState(String FEN, int move, PlayerStatus.GameStatus gameStatus){}
 
 
     private static class PlayerStatus {
@@ -138,7 +140,7 @@ public class Board {
         this.whiteStatus.reset();
         this.blackStatus.reset();
         this.gameStates.clear();
-        this.gameStates.add(getFEN());
+        this.gameStates.add(new GameState(getFEN(), turn, PlayerStatus.GameStatus.NORMAL));
         generateAllLegalMoves(this.whiteStatus);
     }
 
@@ -251,7 +253,8 @@ public class Board {
 
         updateStatus(originalPiece, move);
 
-        gameStates.add(getFEN());
+        gameStates.add(new GameState(getFEN(), turn, currentPlayerColor == WHITE ?
+                whiteStatus.gameStatus : blackStatus.gameStatus));
         return captured;
     }
 
@@ -594,7 +597,7 @@ public class Board {
     }
 
     public void aiMove() {
-        String FEN = this.gameStates.getLast();
+        String FEN = this.gameStates.getLast().FEN;
         System.out.println(FEN);
         if (FEN.isBlank()) {
             throw new IllegalStateException("Invalid FEN");
@@ -638,7 +641,7 @@ public class Board {
      * @return a list of all game states as a copy
      */
     public List<String> getGameStates() {
-        return new ArrayList<>(gameStates);
+        return gameStates.stream().map(GameState::FEN).collect(Collectors.toList());
     }
 
     /**
