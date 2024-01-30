@@ -270,25 +270,25 @@ public class MoveGeneration {
 
     private static int generateCastlingMoves(BitBoards state, Move[] moves, int index) {
         if (state.whiteToMove) {
-            // White left
-            if ((state.castleRights & 0b1) != 0 && (state.allPieces & WHITE_KiNG_LEfT_CASTLE_OPEN) == 0) {
-                moves[index++] = new Move(WHITE_KING_START, 2, Move.MoveType.CASTLE_LEFT,
-                        KING);
-            }
-            // White right
-            if ((state.castleRights & 0b10) != 0 && (state.allPieces & WHITE_KING_RIGHT_CASTLE_OPEN) == 0) {
+            // White king-side
+            if ((state.castleRights & 0b1) != 0 && (state.allPieces & WHITE_KING_RIGHT_CASTLE_OPEN) == 0) {
                 moves[index++] = new Move(WHITE_KING_START, 6, Move.MoveType.CASTLE_RIGHT,
                         KING);
             }
-        } else {
-            // Black left
-            if ((state.castleRights & 0b100) != 0 && (state.allPieces & BLACK_KING_LEFT_CASTLE_OPEN) == 0) {
-                moves[index++] = new Move(BLACK_KING_START, 58, Move.MoveType.CASTLE_LEFT, KING);
+            // White queen-side
+            if ((state.castleRights & 0b10) != 0 && (state.allPieces & WHITE_KiNG_LEFT_CASTLE_OPEN) == 0) {
+                moves[index++] = new Move(WHITE_KING_START, 2, Move.MoveType.CASTLE_LEFT,
+                        KING);
             }
-            // Black right
-            if ((state.castleRights & 0b1000) != 0 && (state.allPieces & BLACK_KING_RIGHT_CASTLE_OPEN) == 0) {
+        } else {
+            // Black king-side
+            if ((state.castleRights & 0b0100) != 0 && (state.allPieces & BLACK_KING_RIGHT_CASTLE_OPEN) == 0) {
                 moves[index++] = new Move(BLACK_KING_START, 62, Move.MoveType.CASTLE_RIGHT,
                         KING);
+            }
+            // Black queen-side
+            if ((state.castleRights & 0b1000) != 0 && (state.allPieces & BLACK_KING_LEFT_CASTLE_OPEN) == 0) {
+                moves[index++] = new Move(BLACK_KING_START, 58, Move.MoveType.CASTLE_LEFT, KING);
             }
         }
         return index;
