@@ -1,7 +1,5 @@
 package ai;
 
-import java.util.Arrays;
-
 class BitBoards {
     static final int PAWN_VAL = 100, ROOK_VAL = 500, KNIGHT_VAL = 300, BISHOP_VAL = 300,
             QUEEN_VAL = 900, KING_VAL = 10000;
@@ -119,7 +117,7 @@ class BitBoards {
             BLACK_KING_START = 60;
     static final long RANK_1 = 0xFFL, RANK_2 = 0xFFL << 8, RANK_3 = 0xFFL << 16, RANK_4 =
             0xFFL << 24, RANK_5 = 0xFFL << 32, RANK_6 = 0xFFL << 40, RANK_7 = 0xFFL << 48, RANK_8
-            = 0xFFL << 56, WHITE_KiNG_LEfT_CASTLE_OPEN = 0xEL, WHITE_KING_RIGHT_CASTLE_OPEN = 0x60L,
+            = 0xFFL << 56, WHITE_KiNG_LEFT_CASTLE_OPEN = 0xEL, WHITE_KING_RIGHT_CASTLE_OPEN = 0x60L,
             BLACK_KING_LEFT_CASTLE_OPEN = 0xEL << 56, BLACK_KING_RIGHT_CASTLE_OPEN =
             0x60L << 56, WHITE_KING_LEFT_SAFE_NEEDED = 0x1CL, WHITE_KING_RIGHT_SAFE_NEEDED = 0x70L,
             BLACK_KING_LEFT_SAFE_NEEDED = 0x1CL << 56, BLACK_KING_RIGHT_SAFE_NEEDED = 0x70L << 56;
@@ -929,7 +927,7 @@ class BitBoards {
                 newState.halfMoveClock = 0;
                 newState.blackPawns &= ~endBitboard;
                 if ((newState.blackRooks & endBitboard) != 0) {
-                    newState.castleRights &= move.end() == H8 ? 0b0111 : 0b1011;
+                    newState.castleRights &= move.end() == H8 ? 0b1011 : 0b0111;
                     newState.blackRooks &= ~endBitboard;
                 }
                 newState.blackKnights &= ~endBitboard;
@@ -960,7 +958,7 @@ class BitBoards {
                 newState.halfMoveClock = 0;
                 newState.whitePawns &= ~endBitboard;
                 if ((newState.whiteRooks & endBitboard) != 0) {
-                    newState.castleRights &= move.end() == H1 ? 0b1101 : 0b1110;
+                    newState.castleRights &= move.end() == H1 ? 0b1110 : 0b1101;
                     newState.whiteRooks &= ~endBitboard;
                 }
                 newState.whiteKnights &= ~endBitboard;
@@ -986,22 +984,43 @@ class BitBoards {
      */
     private BitBoards tryMoveEnPassant(Move move) {
         BitBoards newState = new BitBoards(this);
+        if (newState.enPassantIndex == -1) {
+            throw new IllegalStateException("Unexpected en passant index: " +
+                    newState.enPassantIndex);
+        }
+
         int start = move.start();
         long startBitboard = SQUARE_TO_BITBOARD[start];
         int end = move.end();
         long endBitboard = SQUARE_TO_BITBOARD[end];
         long moveBitboard = startBitboard | endBitboard;
         if (newState.whiteToMove) {
+            if ((newState.blackPieces & endBitboard) != 0) {
+                throw new IllegalStateException("Unexpected black piece at end square: " + move);
+            }
+
             newState.whitePawns ^= moveBitboard;
             newState.whitePieces ^= moveBitboard;
             newState.allPieces ^= moveBitboard;
+            if ((newState.blackPawns & SQUARE_TO_BITBOARD[end - 8]) == 0) {
+                throw new IllegalStateException("No black pawn to en passant: " + move);
+            }
+
             newState.blackPawns ^= SQUARE_TO_BITBOARD[end - 8];
             newState.blackPieces ^= SQUARE_TO_BITBOARD[end - 8];
             newState.allPieces ^= SQUARE_TO_BITBOARD[end - 8];
         } else {
+            if ((newState.whitePieces & endBitboard) != 0) {
+                throw new IllegalStateException("Unexpected white piece at end square: " + move);
+            }
+
             newState.blackPawns ^= moveBitboard;
             newState.blackPieces ^= moveBitboard;
             newState.allPieces ^= moveBitboard;
+            if ((newState.whitePawns & SQUARE_TO_BITBOARD[end + 8]) == 0) {
+                throw new IllegalStateException("No white pawn to en passant: " + move);
+            }
+
             newState.whitePawns ^= SQUARE_TO_BITBOARD[end + 8];
             newState.whitePieces ^= SQUARE_TO_BITBOARD[end + 8];
             newState.allPieces ^= SQUARE_TO_BITBOARD[end + 8];
@@ -1020,24 +1039,24 @@ class BitBoards {
      */
     private BitBoards tryMoveCastleLeft(Move move) {
         BitBoards newState = new BitBoards(this);
-        long kingBitboard, rookBitboard;
+        long kingMoveBitboard, rookMoveBitboard;
         if (newState.whiteToMove) {
-            kingBitboard =
+            kingMoveBitboard =
                     SQUARE_TO_BITBOARD[WHITE_KING_START] | SQUARE_TO_BITBOARD[WHITE_KING_START - 2];
-            rookBitboard = SQUARE_TO_BITBOARD[A1] | SQUARE_TO_BITBOARD[WHITE_KING_START - 1];
-            newState.whiteKing ^= kingBitboard;
-            newState.whiteRooks ^= rookBitboard;
-            newState.whitePieces ^= kingBitboard | rookBitboard;
-            newState.allPieces ^= kingBitboard | rookBitboard;
+            rookMoveBitboard = SQUARE_TO_BITBOARD[A1] | SQUARE_TO_BITBOARD[WHITE_KING_START - 1];
+            newState.whiteKing ^= kingMoveBitboard;
+            newState.whiteRooks ^= rookMoveBitboard;
+            newState.whitePieces ^= kingMoveBitboard | rookMoveBitboard;
+            newState.allPieces ^= kingMoveBitboard | rookMoveBitboard;
             newState.castleRights &= 0b1100;
         } else {
-            kingBitboard =
+            kingMoveBitboard =
                     SQUARE_TO_BITBOARD[BLACK_KING_START] | SQUARE_TO_BITBOARD[BLACK_KING_START - 2];
-            rookBitboard = SQUARE_TO_BITBOARD[A8] | SQUARE_TO_BITBOARD[BLACK_KING_START - 1];
-            newState.blackKing ^= kingBitboard;
-            newState.blackRooks ^= rookBitboard;
-            newState.blackPieces ^= kingBitboard | rookBitboard;
-            newState.allPieces ^= kingBitboard | rookBitboard;
+            rookMoveBitboard = SQUARE_TO_BITBOARD[A8] | SQUARE_TO_BITBOARD[BLACK_KING_START - 1];
+            newState.blackKing ^= kingMoveBitboard;
+            newState.blackRooks ^= rookMoveBitboard;
+            newState.blackPieces ^= kingMoveBitboard | rookMoveBitboard;
+            newState.allPieces ^= kingMoveBitboard | rookMoveBitboard;
             newState.castleRights &= 0b0011;
         }
         newState.enPassantIndex = -1;
@@ -1053,24 +1072,24 @@ class BitBoards {
      */
     private BitBoards tryMoveCastleRight(Move move) {
         BitBoards newState = new BitBoards(this);
-        long kingBitboard, rookBitboard;
+        long kingMoveBitboard, rookMoveBitboard;
         if (newState.whiteToMove) {
-            kingBitboard =
+            kingMoveBitboard =
                     SQUARE_TO_BITBOARD[WHITE_KING_START] | SQUARE_TO_BITBOARD[WHITE_KING_START + 2];
-            rookBitboard = SQUARE_TO_BITBOARD[H1] | SQUARE_TO_BITBOARD[WHITE_KING_START + 1];
-            newState.whiteKing ^= kingBitboard;
-            newState.whiteRooks ^= rookBitboard;
-            newState.whitePieces ^= kingBitboard | rookBitboard;
-            newState.allPieces ^= kingBitboard | rookBitboard;
+            rookMoveBitboard = SQUARE_TO_BITBOARD[H1] | SQUARE_TO_BITBOARD[WHITE_KING_START + 1];
+            newState.whiteKing ^= kingMoveBitboard;
+            newState.whiteRooks ^= rookMoveBitboard;
+            newState.whitePieces ^= kingMoveBitboard | rookMoveBitboard;
+            newState.allPieces ^= kingMoveBitboard | rookMoveBitboard;
             newState.castleRights &= 0b1100;
         } else {
-            kingBitboard =
+            kingMoveBitboard =
                     SQUARE_TO_BITBOARD[BLACK_KING_START] | SQUARE_TO_BITBOARD[BLACK_KING_START + 2];
-            rookBitboard = SQUARE_TO_BITBOARD[H8] | SQUARE_TO_BITBOARD[BLACK_KING_START + 1];
-            newState.blackKing ^= kingBitboard;
-            newState.blackRooks ^= rookBitboard;
-            newState.blackPieces ^= kingBitboard | rookBitboard;
-            newState.allPieces ^= kingBitboard | rookBitboard;
+            rookMoveBitboard = SQUARE_TO_BITBOARD[H8] | SQUARE_TO_BITBOARD[BLACK_KING_START + 1];
+            newState.blackKing ^= kingMoveBitboard;
+            newState.blackRooks ^= rookMoveBitboard;
+            newState.blackPieces ^= kingMoveBitboard | rookMoveBitboard;
+            newState.allPieces ^= kingMoveBitboard | rookMoveBitboard;
             newState.castleRights &= 0b0011;
         }
         newState.enPassantIndex = -1;
@@ -1112,63 +1131,66 @@ class BitBoards {
         long startBitboard = SQUARE_TO_BITBOARD[move.start()], endBitboard =
                 SQUARE_TO_BITBOARD[move.end()];
         if (newState.whiteToMove) {
-            newState.whitePawns ^= startBitboard;
-            newState.whitePieces ^= startBitboard;
+            newState.whitePawns &= ~startBitboard;
+            newState.whitePieces &= ~startBitboard;
             switch (move.moveType()) {
-                case PROMOTE_ROOK -> newState.whiteRooks ^= endBitboard;
-                case PROMOTE_KNIGHT -> newState.whiteKnights ^= endBitboard;
-                case PROMOTE_BISHOP -> newState.whiteBishops ^= endBitboard;
-                case PROMOTE_QUEEN -> newState.whiteQueens ^= endBitboard;
+                case PROMOTE_ROOK -> newState.whiteRooks |= endBitboard;
+                case PROMOTE_KNIGHT -> newState.whiteKnights |= endBitboard;
+                case PROMOTE_BISHOP -> newState.whiteBishops |= endBitboard;
+                case PROMOTE_QUEEN -> newState.whiteQueens |= endBitboard;
                 default ->
                         throw new IllegalStateException("Unexpected value in promotion: " + move.moveType());
             }
-            newState.whitePieces ^= endBitboard;
+            newState.whitePieces |= endBitboard;
             if ((newState.blackPieces & endBitboard) != 0) {
                 if ((newState.blackPawns & endBitboard) != 0) {
                     throw new IllegalStateException("Unexpected black pawn at promotion square");
                 }
 
+                newState.halfMoveClock = 0;
                 if (move.end() == H8) {
                     newState.castleRights &= 0b0111;
                 } else if (move.end() == A8) {
                     newState.castleRights &= 0b1011;
                 }
-                newState.blackRooks ^= endBitboard;
-                newState.blackKnights ^= endBitboard;
-                newState.blackBishops ^= endBitboard;
-                newState.blackQueens ^= endBitboard;
-                newState.blackPieces ^= endBitboard;
+                newState.blackRooks &= ~endBitboard;
+                newState.blackKnights &= ~endBitboard;
+                newState.blackBishops &= ~endBitboard;
+                newState.blackQueens &= ~endBitboard;
+                newState.blackPieces &= ~endBitboard;
             }
         } else {
-            newState.blackPawns ^= startBitboard;
-            newState.blackPieces ^= startBitboard;
+            newState.blackPawns &= ~startBitboard;
+            newState.blackPieces &= ~startBitboard;
             switch (move.moveType()) {
-                case PROMOTE_ROOK -> newState.blackRooks ^= endBitboard;
-                case PROMOTE_KNIGHT -> newState.blackKnights ^= endBitboard;
-                case PROMOTE_BISHOP -> newState.blackBishops ^= endBitboard;
-                case PROMOTE_QUEEN -> newState.blackQueens ^= endBitboard;
+                case PROMOTE_ROOK -> newState.blackRooks |= endBitboard;
+                case PROMOTE_KNIGHT -> newState.blackKnights |= endBitboard;
+                case PROMOTE_BISHOP -> newState.blackBishops |= endBitboard;
+                case PROMOTE_QUEEN -> newState.blackQueens |= endBitboard;
                 default ->
                         throw new IllegalStateException("Unexpected value in promotion: " + move.moveType());
             }
-            newState.blackPieces ^= endBitboard;
+            newState.blackPieces |= endBitboard;
             if ((newState.whitePieces & endBitboard) != 0) {
                 if ((newState.whitePawns & endBitboard) != 0) {
                     throw new IllegalStateException("Unexpected white pawn at promotion square");
                 }
 
+                newState.halfMoveClock = 0;
                 if (move.end() == H1) {
                     newState.castleRights &= 0b1101;
                 } else if (move.end() == A1) {
                     newState.castleRights &= 0b1110;
                 }
-                newState.whiteRooks ^= endBitboard;
-                newState.whiteKnights ^= endBitboard;
-                newState.whiteBishops ^= endBitboard;
-                newState.whiteQueens ^= endBitboard;
-                newState.whitePieces ^= endBitboard;
+                newState.whiteRooks &= ~endBitboard;
+                newState.whiteKnights &= ~endBitboard;
+                newState.whiteBishops &= ~endBitboard;
+                newState.whiteQueens &= ~endBitboard;
+                newState.whitePieces &= ~endBitboard;
             }
         }
-        newState.allPieces ^= startBitboard | endBitboard;
+        newState.allPieces &= ~startBitboard;
+        newState.allPieces |= endBitboard;
         newState.enPassantIndex = -1;
 
         return newState;
@@ -1310,6 +1332,12 @@ class BitBoards {
         return whiteToMove ? score : -score;
     }
 
+    /**
+     * Displays the bitboard in a readable format
+     *
+     * @param bitBoard bitboard to display
+     * @return string representation of the bitboard
+     */
     static String displayLongAsBitboard(long bitBoard) {
         StringBuilder sb = new StringBuilder();
         for (int i = 7; i >= 0; --i) {
@@ -1331,6 +1359,7 @@ class BitBoards {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
+        sb.append(whiteToMove ? "White to move\n" : "Black to move\n");
 
         for (int i = 7; i >= 0; --i) {
             for (int j = 0; j < 8; ++j) {
