@@ -132,18 +132,6 @@ record Move(int start, int end, MoveType moveType, PieceType pieceType, int valu
         if (start == -1 || end == -1 || moveType == MoveType.ERROR) {
             return "ERROR";
         }
-        return indexToNotation(start) + indexToNotation(end) + " " + switch (moveType) {
-            case UNKNOWN -> "U";
-            case NORMAL -> "N";
-            case CASTLE_LEFT -> "CL";
-            case CASTLE_RIGHT -> "CR";
-            case PAWN_DOUBLE_MOVE -> "D";
-            case EN_PASSANT -> "E";
-            case PROMOTE_ROOK -> "R";
-            case PROMOTE_KNIGHT -> "K";
-            case PROMOTE_BISHOP -> "B";
-            case PROMOTE_QUEEN -> "Q";
-            default -> throw new IllegalStateException("Unexpected value: " + moveType);
-        };
+        return indexToNotation(start) + indexToNotation(end) + " " + moveType;
     }
 }
