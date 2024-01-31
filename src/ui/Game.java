@@ -402,9 +402,11 @@ class UIBoard extends JPanel {
                     setEnabled(false);
                 }
             } catch (IllegalArgumentException e) {
-                System.err.println("Bad argument: " + e.getMessage());
+                System.err.println("Bad argument.");
+                e.printStackTrace();
             } catch (IllegalStateException e) {
-                System.err.println("Game logic error: " + e.getMessage());
+                System.err.println("Game logic error.");
+                e.printStackTrace();
             }
         } else {
             throw new IllegalStateException("Invalid move");
