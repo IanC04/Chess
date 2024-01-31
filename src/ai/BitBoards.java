@@ -405,6 +405,8 @@ class BitBoards {
 
     GameStatus gameStatus;
 
+    final BitBoards parent;
+
     /**
      * Initial bitboard and should only be called once each time the best move is requested
      *
@@ -496,6 +498,8 @@ class BitBoards {
         this.enPassantIndex = enPassant.equals("-") ? -1 : Move.notationToIndex(enPassant);
         this.halfMoveClock = Integer.parseInt(halfMoveClock);
         this.moveCounter = Integer.parseInt(moveCounter);
+        updateGameStatus(this);
+        this.parent = null;
     }
 
     private BitBoards(BitBoards state) {
@@ -520,6 +524,7 @@ class BitBoards {
         this.moveCounter = state.moveCounter;
         this.castleRights = state.castleRights;
         this.gameStatus = state.gameStatus;
+        this.parent = state;
     }
 
     /**
@@ -554,22 +559,27 @@ class BitBoards {
      * @return new state
      */
     BitBoards makeMove(Move move) {
-        BitBoards newState = tryMove(move);
-        if ((newState.whitePieces & newState.blackPieces) != 0) {
-            throw new IllegalStateException(String.format("""
-                    %s caused white and black pieces to overlap from
-                    %s
-                    to
-                    %s""", move, this, newState));
+        BitBoards newState = null;
+        try {
+            newState = tryMove(move);
+            updateGameStatus(newState);
+            return newState;
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException("Illegal move: " + move, e);
+        } finally {
+            if (newState != null && ((newState.whitePieces & newState.blackPieces) != 0)) {
+                System.err.printf("""
+                        %s caused white and black pieces to overlap from
+                        %s
+                        to
+                        %s%n""", move, this, newState);
+            }
         }
-
-        updateGameStatus(newState);
-        return newState;
     }
 
     private void updateGameStatus(BitBoards newState) {
-        boolean inCheck = safeSquare(newState.whiteToMove, newState.whiteToMove ? newState.whiteKing :
-                newState.blackKing);
+        boolean inCheck = !safeSquare(newState.whiteToMove, newState.whiteToMove ?
+                newState.whiteKing : newState.blackKing);
         boolean hasLegalMove = MoveGeneration.hasLegalMoves(newState);
         if (inCheck) {
             newState.gameStatus = hasLegalMove ? GameStatus.CHECK : GameStatus.CHECKMATE;
@@ -1055,6 +1065,39 @@ class BitBoards {
         System.out.println(sb);
 
         return sb.toString();
+    }
+
+    /**
+     * Checks if the bitboards overlap
+     *
+     * @param bitBoards default bitboards to check
+     * @param states    bitboards to check
+     * @return if the bitboards overlap
+     */
+    static boolean checkOverlap(BitBoards bitBoards, long... states) {
+        if (states.length == 0) {
+            states = new long[]{
+                    bitBoards.whitePawns, bitBoards.whiteKnights, bitBoards.whiteBishops,
+                    bitBoards.whiteRooks, bitBoards.whiteQueens, bitBoards.whiteKing,
+                    bitBoards.blackPawns, bitBoards.blackKnights, bitBoards.blackBishops,
+                    bitBoards.blackRooks, bitBoards.blackQueens, bitBoards.blackKing
+            };
+        }
+        for (int i = 0; i < states.length - 1; i++) {
+            long bitBoard = states[i];
+            for (int j = i + 1; j < states.length; j++) {
+                long nextBitBoard = states[j];
+                if ((bitBoard & (nextBitBoard)) != 0) {
+
+                    displayLongAsBitboard(bitBoard);
+                    displayLongAsBitboard(nextBitBoard);
+                    System.err.println("Overlapping bitboards: " + i + " and " + j);
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     @Override
