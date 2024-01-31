@@ -553,7 +553,6 @@ class BitBoards {
 
     /**
      * Called when making a move and updating the game status
-     * TODO: Fix bug where white and black pieces overlap
      *
      * @param move move to make
      * @return new state
