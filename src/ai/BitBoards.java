@@ -996,6 +996,7 @@ class BitBoards {
     int evaluateBoard() {
         return switch (gameStatus) {
             // Fine since -Integer.MIN_VALUE == Integer.MIN_VALUE
+            // TODO: Check if this is correct
             case CHECKMATE -> whiteToMove ? Integer.MIN_VALUE : Integer.MAX_VALUE;
             case STALEMATE, FIFTY_MOVE_RULE, THREEFOLD_REPETITION, INSUFFICIENT_MATERIAL -> 0;
             case NORMAL, CHECK -> evaluateBoardNormal();

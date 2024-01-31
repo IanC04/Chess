@@ -86,7 +86,7 @@ public class NegaMax {
             return openingMove;
         }
         BitBoards state = new BitBoards(FEN);
-        Move bestMove = rootNegaMax(state, 7, Integer.MIN_VALUE, Integer.MAX_VALUE,
+        Move bestMove = rootNegaMax(state, 6, Integer.MIN_VALUE, Integer.MAX_VALUE,
                 state.whiteToMove);
         if (bestMove == null) {
             throw new IllegalStateException("No move found");
