@@ -92,10 +92,10 @@ public class MoveGeneration {
         // Pawn double moves
         if (state.whiteToMove && (doubleMove & ~RANK_4) != 0) {
             throw new IllegalStateException("Invalid WHITE pawn double move generation:\n" +
-                    displayLongAsBitboard(doubleMove));
+                    longAsBitboard(doubleMove, false));
         } else if (!state.whiteToMove && (doubleMove & ~RANK_5) != 0) {
             throw new IllegalStateException("Invalid BLACK pawn double move generation:\n" +
-                    displayLongAsBitboard(doubleMove));
+                    longAsBitboard(doubleMove, false));
         }
 
         while (doubleMove != 0) {
@@ -111,27 +111,30 @@ public class MoveGeneration {
 
         // En passant
         if (state.enPassantIndex != -1) {
-            long enPassant;
+            long enPassantStart;
             if (state.whiteToMove) {
-                enPassant = BLACK_PAWN_POSSIBLE_CAPTURES[state.enPassantIndex];
+                enPassantStart = BLACK_PAWN_POSSIBLE_CAPTURES[state.enPassantIndex];
+                if ((enPassantStart & ~RANK_5) != 0) {
+                    System.err.println("En-passant: " + state.enPassantIndex);
+                    throw new IllegalStateException("Invalid white en passant:\n" + longAsBitboard(enPassantStart, false));
+                }
             } else {
-                enPassant = WHITE_PAWN_POSSIBLE_CAPTURES[state.enPassantIndex];
-            }
-            if (state.whiteToMove && (enPassant & ~RANK_6) == 0) {
-                throw new IllegalStateException("Invalid white en passant:\n" + displayLongAsBitboard(enPassant));
-            } else if (!state.whiteToMove && (enPassant & ~RANK_3) == 0) {
-                throw new IllegalStateException("Invalid black en passant:\n" + displayLongAsBitboard(enPassant));
+                enPassantStart = WHITE_PAWN_POSSIBLE_CAPTURES[state.enPassantIndex];
+                if ((enPassantStart & ~RANK_4) != 0) {
+                    System.err.println("En-passant: " + state.enPassantIndex);
+                    throw new IllegalStateException("Invalid black en passant:\n" + longAsBitboard(enPassantStart, false));
+                }
             }
 
-            if (Long.bitCount(enPassant) > 2) {
+            if (Long.bitCount(enPassantStart) > 2) {
                 throw new IllegalStateException("Invalid number of en passant moves");
             }
 
-            enPassant &= friendlyPawns;
-            while (enPassant != 0) {
-                int start = Long.numberOfTrailingZeros(enPassant);
+            enPassantStart &= friendlyPawns;
+            while (enPassantStart != 0) {
+                int start = Long.numberOfTrailingZeros(enPassantStart);
                 moves[index++] = new Move(start, state.enPassantIndex, Move.MoveType.EN_PASSANT, PAWN);
-                enPassant ^= SQUARE_TO_BITBOARD[start];
+                enPassantStart ^= SQUARE_TO_BITBOARD[start];
             }
         }
 

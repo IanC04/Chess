@@ -2,7 +2,7 @@ package ai;
 
 class BitBoards {
     static final int PAWN_VAL = 100, ROOK_VAL = 500, KNIGHT_VAL = 300, BISHOP_VAL = 300,
-            QUEEN_VAL = 900, KING_VAL = 10000;
+            QUEEN_VAL = 900, KING_VAL = 10000, CHECKMATE_VAL = Integer.MIN_VALUE / 2;
     /**
      * Returns the positional value of the piece with respect to the board from white's POV
      * <br>Inspired by
@@ -414,6 +414,10 @@ class BitBoards {
      */
     BitBoards(String FEN) {
         String[] FENParts = FEN.split(" ");
+        if (FENParts.length != 6) {
+            throw new IllegalArgumentException("Invalid FEN length: " + FEN);
+        }
+
         String positions = FENParts[0], whiteToMove = FENParts[1], castleRights = FENParts[2],
                 enPassant = FENParts[3], halfMoveClock = FENParts[4], moveCounter = FENParts[5];
         String[] positionParts = positions.split("/");
@@ -478,7 +482,12 @@ class BitBoards {
             position -= 16;
         }
         this.allPieces = whitePieces | blackPieces;
+
+        if (whiteToMove.length() != 1) {
+            throw new IllegalArgumentException("Invalid white to move: " + whiteToMove);
+        }
         this.whiteToMove = whiteToMove.equals("w");
+
         for (char c : castleRights.toCharArray()) {
             switch (c) {
                 case 'K':
@@ -495,7 +504,14 @@ class BitBoards {
                     break;
             }
         }
+
         this.enPassantIndex = enPassant.equals("-") ? -1 : Move.notationToIndex(enPassant);
+        if (this.enPassantIndex != -1) {
+            if ((SQUARE_TO_BITBOARD[this.enPassantIndex] & ~(this.whiteToMove ? RANK_6 : RANK_3)) != 0) {
+                throw new IllegalStateException("Invalid en passant index: " + Move.indexToNotation(this.enPassantIndex));
+            }
+        }
+
         this.halfMoveClock = Integer.parseInt(halfMoveClock);
         this.moveCounter = Integer.parseInt(moveCounter);
         updateGameStatus(this);
@@ -995,9 +1011,9 @@ class BitBoards {
      */
     int evaluateBoard() {
         return switch (gameStatus) {
-            // Fine since -Integer.MIN_VALUE == Integer.MIN_VALUE
+            // -Integer.MIN_VALUE == Integer.MIN_VALUE due to overflow
             // TODO: Check if this is correct
-            case CHECKMATE -> whiteToMove ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+            case CHECKMATE -> CHECKMATE_VAL;
             case STALEMATE, FIFTY_MOVE_RULE, THREEFOLD_REPETITION, INSUFFICIENT_MATERIAL -> 0;
             case NORMAL, CHECK -> evaluateBoardNormal();
         };
@@ -1046,10 +1062,10 @@ class BitBoards {
     /**
      * Displays the bitboard in a readable format
      *
-     * @param bitBoard bitboard to display
+     * @param bitBoard long to convert to readable format
      * @return string representation of the bitboard
      */
-    static String displayLongAsBitboard(long bitBoard) {
+    static String longAsBitboard(long bitBoard, boolean display) {
         StringBuilder sb = new StringBuilder();
         for (int i = 7; i >= 0; --i) {
             for (int j = 0; j < 8; ++j) {
@@ -1062,7 +1078,9 @@ class BitBoards {
             }
             sb.append('\n');
         }
-        System.out.println(sb);
+        if (display) {
+            System.out.println(sb);
+        }
 
         return sb.toString();
     }
@@ -1089,8 +1107,8 @@ class BitBoards {
                 long nextBitBoard = states[j];
                 if ((bitBoard & (nextBitBoard)) != 0) {
 
-                    displayLongAsBitboard(bitBoard);
-                    displayLongAsBitboard(nextBitBoard);
+                    longAsBitboard(bitBoard, true);
+                    longAsBitboard(nextBitBoard, true);
                     System.err.println("Overlapping bitboards: " + i + " and " + j);
                     return true;
                 }
