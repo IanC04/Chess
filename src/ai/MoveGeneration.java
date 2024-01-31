@@ -90,6 +90,14 @@ public class MoveGeneration {
         }
 
         // Pawn double moves
+        if (state.whiteToMove && (doubleMove & ~RANK_4) != 0) {
+            throw new IllegalStateException("Invalid WHITE pawn double move generation:\n" +
+                    displayLongAsBitboard(doubleMove));
+        } else if (!state.whiteToMove && (doubleMove & ~RANK_5) != 0) {
+            throw new IllegalStateException("Invalid BLACK pawn double move generation:\n" +
+                    displayLongAsBitboard(doubleMove));
+        }
+
         while (doubleMove != 0) {
             if (Long.bitCount(doubleMove) > 8) {
                 throw new IllegalStateException("Invalid number of pawn double moves");
@@ -109,6 +117,12 @@ public class MoveGeneration {
             } else {
                 enPassant = WHITE_PAWN_POSSIBLE_CAPTURES[state.enPassantIndex];
             }
+            if (state.whiteToMove && (enPassant & ~RANK_6) == 0) {
+                throw new IllegalStateException("Invalid white en passant:\n" + displayLongAsBitboard(enPassant));
+            } else if (!state.whiteToMove && (enPassant & ~RANK_3) == 0) {
+                throw new IllegalStateException("Invalid black en passant:\n" + displayLongAsBitboard(enPassant));
+            }
+
             if (Long.bitCount(enPassant) > 2) {
                 throw new IllegalStateException("Invalid number of en passant moves");
             }
@@ -124,8 +138,8 @@ public class MoveGeneration {
         // Pawn captures
         while (friendlyPawns != 0) {
             int start = Long.numberOfTrailingZeros(friendlyPawns);
-            long pawnMoves = (state.whiteToMove ? WHITE_PAWN_POSSIBLE_CAPTURES[start] :
-                    BLACK_PAWN_POSSIBLE_CAPTURES[start]) & state.blackPieces;
+            long pawnMoves = (state.whiteToMove ? WHITE_PAWN_POSSIBLE_CAPTURES[start] & state.blackPieces :
+                    BLACK_PAWN_POSSIBLE_CAPTURES[start] & state.whitePieces);
             if (Long.bitCount(pawnMoves) > 2) {
                 throw new IllegalStateException("Invalid number of pawn moves");
             }
@@ -143,7 +157,7 @@ public class MoveGeneration {
 
     private static int addPawnMove(Move[] moves, int index, int start, int end, boolean white,
                                    boolean doubleMove, BitBoards state) {
-        boolean at_end = (white && (SQUARE_TO_BITBOARD[end] & RANK_8) != 0) || (!white && (SQUARE_TO_BITBOARD[end] & RANK_1) != 0);
+        boolean at_end = (white && end >= A8) || (!white && end <= H1);
         if (at_end) {
             for (Move.MoveType moveType : Move.MoveType.PROMOTION_TYPES) {
                 moves[index++] = new Move(start, end, moveType, PAWN);
