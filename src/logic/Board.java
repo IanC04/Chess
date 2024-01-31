@@ -582,7 +582,7 @@ public class Board {
                 if (enPassantFound) {
                     throw new IllegalStateException("Multiple en-passant targets");
                 }
-                fen.append(' ').append(Notation.get(row, i).toString().toLowerCase());
+                fen.append(' ').append(Notation.get(currentPlayerColor == WHITE ? 5 : 2, i).toString().toLowerCase());
                 enPassantFound = true;
             }
         }
