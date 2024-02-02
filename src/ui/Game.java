@@ -190,13 +190,22 @@ class UIBoard extends JPanel {
         System.out.println("Next move");
     }
 
+    private void setInteraction(boolean enabled) {
+        setEnabled(enabled);
+        for (JButton[] row : squares) {
+            for (JButton square : row) {
+                square.setEnabled(enabled);
+            }
+        }
+    }
+
     void resetGame() {
         uiStatusBar.setStatus("New Game");
         logicBoard.resetBoard();
         ai.resetAI();
         boardPOV = true;
         updateBoardMove();
-        setEnabled(true);
+        setInteraction(true);
     }
 
     void resignGame() {
@@ -271,14 +280,15 @@ class UIBoard extends JPanel {
     }
 
     private void highlightKing() {
-        int status = logicBoard.gameStatus();
+        Board.GameStatus status = logicBoard.gameStatus();
         Notation kingPos = logicBoard.getKing(logicBoard.currentPlayerColor);
         byte[] kingPosArr = kingPos.getPosition();
         switch (status) {
-            case 0, 2 ->
+            case NORMAL, STALEMATE, THREEFOLD_REPETITION ->
                     squares[kingPosArr[0]][kingPosArr[1]].setBackground((kingPosArr[0] + kingPosArr[1]) % 2 == 0 ?
                             LIGHT_SQUARE : DARK_SQUARE);
-            case 1, 3 -> squares[kingPosArr[0]][kingPosArr[1]].setBackground(HIGHLIGHT_CHECK);
+            case CHECK, CHECKMATE ->
+                    squares[kingPosArr[0]][kingPosArr[1]].setBackground(HIGHLIGHT_CHECK);
             default -> throw new IllegalStateException("Invalid game status");
         }
     }
@@ -386,20 +396,23 @@ class UIBoard extends JPanel {
                 updateBoardMove();
                 highlightKing();
                 boolean gameOver = switch (logicBoard.gameStatus()) {
-                    case 0, 1:
+                    case NORMAL, CHECK:
                         yield false;
-                    case 2, 3:
+                    case STALEMATE, THREEFOLD_REPETITION:
+                        uiStatusBar.setStatus("Game Over");
+                        uiStatusBar.setStatus("Tie game!");
+                        yield true;
+                    case CHECKMATE:
+                        uiStatusBar.setStatus(String.format("%s wins!",
+                                Piece.PieceColor.opposite(logicBoard.currentPlayerColor)));
                         yield true;
                     default:
                         throw new IllegalStateException("Invalid game status");
                 };
                 if (gameOver) {
-                    uiStatusBar.setStatus("Game Over");
-                    uiStatusBar.setStatus(String.format("%s wins!",
-                            Piece.PieceColor.opposite(logicBoard.currentPlayerColor)));
                     System.out.println("Game Over");
                     // User can still click but no action will be taken
-                    setEnabled(false);
+                    setInteraction(false);
                 }
             } catch (IllegalArgumentException e) {
                 System.err.println("Bad argument.");

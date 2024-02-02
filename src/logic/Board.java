@@ -28,18 +28,19 @@ public class Board {
     // Game positions through each game
     private final ArrayList<GameState> gameStates;
 
-    private record GameState(String FEN, int move, PlayerStatus.GameStatus gameStatus){}
+    public enum GameStatus {
+        NORMAL, CHECK, STALEMATE, CHECKMATE, THREEFOLD_REPETITION
+    }
+
+    private record GameState(String FEN, int move, GameStatus gameStatus) {
+    }
 
 
     private static class PlayerStatus {
         Notation king;
-        GameStatus gameStatus;
+        Board.GameStatus gameStatus;
         final Piece.PieceColor color;
         final HashMap<Piece, Set<Move>> allLegalMoves;
-
-        private enum GameStatus {
-            NORMAL, CHECK, STALEMATE, CHECKMATE
-        }
 
         private PlayerStatus(Piece.PieceColor color) {
             this(color, color == WHITE ? E1 : E8);
@@ -48,13 +49,13 @@ public class Board {
         private PlayerStatus(Piece.PieceColor color, Notation king) {
             this.color = color;
             this.king = king;
-            this.gameStatus = GameStatus.NORMAL;
+            this.gameStatus = Board.GameStatus.NORMAL;
             this.allLegalMoves = new HashMap<>();
         }
 
         public void reset() {
             this.king = color == WHITE ? E1 : E8;
-            this.gameStatus = GameStatus.NORMAL;
+            this.gameStatus = Board.GameStatus.NORMAL;
             this.allLegalMoves.clear();
         }
 
@@ -140,7 +141,7 @@ public class Board {
         this.whiteStatus.reset();
         this.blackStatus.reset();
         this.gameStates.clear();
-        this.gameStates.add(new GameState(getFEN(), turn, PlayerStatus.GameStatus.NORMAL));
+        this.gameStates.add(new GameState(getFEN(), turn, GameStatus.NORMAL));
         generateAllLegalMoves(this.whiteStatus);
     }
 
@@ -419,10 +420,10 @@ public class Board {
      *
      * @return Zero if normal, One if checked, Two if stalemated, Three if checkmated
      */
-    public int gameStatus() {
+    public GameStatus gameStatus() {
         PlayerStatus player = currentPlayerColor == Piece.PieceColor.WHITE ? whiteStatus :
                 blackStatus;
-        return player.gameStatus.ordinal();
+        return player.gameStatus;
     }
 
     /**
@@ -451,14 +452,20 @@ public class Board {
         boolean noMoves = getAllLegalMoves().isEmpty();
         if (checked) {
             if (noMoves) {
-                playerToCheckStatus.gameStatus = PlayerStatus.GameStatus.CHECKMATE;
+                playerToCheckStatus.gameStatus = GameStatus.CHECKMATE;
             } else {
-                playerToCheckStatus.gameStatus = PlayerStatus.GameStatus.CHECK;
+                playerToCheckStatus.gameStatus = GameStatus.CHECK;
             }
         } else if (noMoves) {
-            playerToCheckStatus.gameStatus = PlayerStatus.GameStatus.STALEMATE;
+            playerToCheckStatus.gameStatus = GameStatus.STALEMATE;
         } else {
-            playerToCheckStatus.gameStatus = PlayerStatus.GameStatus.NORMAL;
+            final String currentPosition = getFEN().split(" ")[0];
+            // Game states do not include the current state
+            if (gameStates.stream().filter(gs -> gs.FEN.split(" ")[0].equals(currentPosition)).count() >= 2) {
+                playerToCheckStatus.gameStatus = GameStatus.THREEFOLD_REPETITION;
+            } else {
+                playerToCheckStatus.gameStatus = GameStatus.NORMAL;
+            }
         }
     }
 
