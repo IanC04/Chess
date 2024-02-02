@@ -108,10 +108,12 @@ public class NegaMax {
         }
 
         Move[] allMoves = MoveGeneration.generateSortedLegalMoves(state);
+        if (allMoves.length == 0) {
+            return null;
+        }
         Move bestMove = new Move();
         for (Move move : allMoves) {
-            BitBoards newState = state.makeMove(move);
-            int value = -negaMax(newState, depth - 1, -beta, -alpha, !color);
+            int value = -negaMax(state.tryMove(move), depth - 1, -beta, -alpha, !color);
             if (value > bestMove.value()) {
                 bestMove = new Move(move.start(), move.end(), move.moveType(),
                         move.pieceType(), value);
@@ -136,14 +138,14 @@ public class NegaMax {
      * @return the best score
      */
     private int negaMax(BitBoards state, int depth, int alpha, int beta, boolean color) {
-        if (depth == 0 || state.gameOver()) {
-            return state.evaluateBoard();
+        Move[] allMoves = MoveGeneration.generateSortedLegalMoves(state);
+        if (depth == 0 || allMoves.length == 0) {
+            return state.evaluateBoard(allMoves);
         }
 
-        Move[] allMoves = MoveGeneration.generateSortedLegalMoves(state);
         int bestValue = Integer.MIN_VALUE;
         for (Move move : allMoves) {
-            int value = -negaMax(state.makeMove(move), depth - 1, -beta, -alpha, !color);
+            int value = -negaMax(state.tryMove(move), depth - 1, -beta, -alpha, !color);
             bestValue = Math.max(bestValue, value);
             alpha = Math.max(alpha, value);
             if (alpha >= beta) {

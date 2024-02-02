@@ -7,10 +7,20 @@ import static ai.BitBoards.*;
 import static ai.Move.PieceType.*;
 
 public class MoveGeneration {
+    /**
+     * Interfaces with the move generation and move validation
+     * Generates all legal moves for the current state in descending order of value
+     *
+     * @param state current state
+     * @return all legal moves in descending order of value
+     */
+    static Move[] generateSortedLegalMoves(BitBoards state) {
+        Move[] legalMoves = generateLegalMoves(state);
 
-    static boolean hasLegalMoves(BitBoards state) {
-        Move[] moves = generateLegalMoves(state);
-        return moves.length != 0;
+        // Negative since the highest value, aka best, should be first
+        Arrays.sort(legalMoves,
+                Comparator.comparingInt(m -> -Move.movePositionValue(m, state.whiteToMove)));
+        return legalMoves;
     }
 
     /**
@@ -30,15 +40,6 @@ public class MoveGeneration {
 
         // Truncates array
         return Arrays.copyOf(moves, index);
-    }
-
-    static Move[] generateSortedLegalMoves(BitBoards state) {
-        Move[] legalMoves = generateLegalMoves(state);
-
-        // Negative since the highest value, aka best, should be first
-        Arrays.sort(legalMoves,
-                Comparator.comparingInt(m -> -Move.movePositionValue(m, state.whiteToMove)));
-        return legalMoves;
     }
 
 

@@ -403,9 +403,9 @@ class BitBoards {
         INSUFFICIENT_MATERIAL
     }
 
-    GameStatus gameStatus;
+    private GameStatus gameStatus;
 
-    final BitBoards parent;
+    private final BitBoards parent;
 
     /**
      * Initial bitboard and should only be called once each time the best move is requested
@@ -514,7 +514,6 @@ class BitBoards {
 
         this.halfMoveClock = Integer.parseInt(halfMoveClock);
         this.moveCounter = Integer.parseInt(moveCounter);
-        updateGameStatus(this);
         this.parent = null;
     }
 
@@ -544,7 +543,7 @@ class BitBoards {
     }
 
     /**
-     * Called when validating a move
+     * Called when validating a move or performing a move
      *
      * @param move move to make
      * @return new state
@@ -564,62 +563,16 @@ class BitBoards {
         };
         newState.whiteToMove = !this.whiteToMove;
         ++newState.moveCounter;
+
+        if (checkOverlap(newState)) {
+            System.err.printf("""
+                    %s caused white and black pieces to overlap from
+                    %s
+                    to
+                    %s%n""", move, this, newState);
+            throw new IllegalStateException("White and black pieces overlap");
+        }
         return newState;
-    }
-
-    /**
-     * Called when making a move and updating the game status
-     *
-     * @param move move to make
-     * @return new state
-     */
-    BitBoards makeMove(Move move) {
-        BitBoards newState = null;
-        try {
-            newState = tryMove(move);
-            updateGameStatus(newState);
-            return newState;
-        } catch (IllegalStateException e) {
-            throw new IllegalStateException("Illegal move: " + move, e);
-        } finally {
-            if (newState != null && ((newState.whitePieces & newState.blackPieces) != 0)) {
-                System.err.printf("""
-                        %s caused white and black pieces to overlap from
-                        %s
-                        to
-                        %s%n""", move, this, newState);
-            }
-        }
-    }
-
-    private void updateGameStatus(BitBoards newState) {
-        boolean inCheck = !safeSquare(newState.whiteToMove, newState.whiteToMove ?
-                newState.whiteKing : newState.blackKing);
-        boolean hasLegalMove = MoveGeneration.hasLegalMoves(newState);
-        if (inCheck) {
-            newState.gameStatus = hasLegalMove ? GameStatus.CHECK : GameStatus.CHECKMATE;
-        } else {
-            newState.gameStatus = hasLegalMove ? GameStatus.NORMAL : GameStatus.STALEMATE;
-        }
-
-        if (newState.halfMoveClock >= 100) {
-            newState.gameStatus = GameStatus.FIFTY_MOVE_RULE;
-        }
-        if (Long.bitCount(newState.whitePawns | newState.blackPawns | newState.whiteRooks | newState.blackRooks | newState.whiteQueens | newState.blackQueens) == 0) {
-            int knightCount = Long.bitCount(newState.whiteKnights | newState.blackKnights);
-            int bishopCount = Long.bitCount(newState.whiteBishops | newState.blackBishops);
-            if (knightCount <= 2 || bishopCount <= 1) {
-                newState.gameStatus = GameStatus.INSUFFICIENT_MATERIAL;
-            }
-        }
-    }
-
-    boolean gameOver() {
-        return switch (gameStatus) {
-            case CHECKMATE, STALEMATE, FIFTY_MOVE_RULE, THREEFOLD_REPETITION, INSUFFICIENT_MATERIAL ->
-                    true;
-            case NORMAL, CHECK -> false;
-        };
     }
 
     /**
@@ -923,6 +876,42 @@ class BitBoards {
     }
 
     /**
+     * Updates the game status based on if there are legal moves, if the king is in check, and if
+     * the remaining pieces are enough to checkmate
+     *
+     * @param stateLegalMoves legal moves for the new state
+     */
+    private void updateGameStatus(Move[] stateLegalMoves) {
+        boolean inCheck = !safeSquare(whiteToMove, whiteToMove ?
+                whiteKing : blackKing);
+        boolean hasLegalMove = stateLegalMoves.length > 0;
+        if (inCheck) {
+            gameStatus = hasLegalMove ? GameStatus.CHECK : GameStatus.CHECKMATE;
+        } else {
+            gameStatus = hasLegalMove ? GameStatus.NORMAL : GameStatus.STALEMATE;
+        }
+
+        if (halfMoveClock >= 100) {
+            gameStatus = GameStatus.FIFTY_MOVE_RULE;
+        }
+        if (Long.bitCount(whitePawns | blackPawns | whiteRooks | blackRooks | whiteQueens | blackQueens) == 0) {
+            int knightCount = Long.bitCount(whiteKnights | blackKnights);
+            int bishopCount = Long.bitCount(whiteBishops | blackBishops);
+            if (knightCount <= 2 || bishopCount <= 1) {
+                gameStatus = GameStatus.INSUFFICIENT_MATERIAL;
+            }
+        }
+    }
+
+    boolean gameOver() {
+        return switch (gameStatus) {
+            case CHECKMATE, STALEMATE, FIFTY_MOVE_RULE, THREEFOLD_REPETITION, INSUFFICIENT_MATERIAL ->
+                    true;
+            case NORMAL, CHECK -> false;
+        };
+    }
+
+    /**
      * Checks if the current color of the board is being attacked on the specified square
      *
      * @param color  color of the player to check
@@ -989,30 +978,22 @@ class BitBoards {
         }
 
         // King attacks
-        while (enemyKing != 0) {
-            int enemyKingIndex = Long.numberOfTrailingZeros(enemyKing);
-            if ((KING_POSSIBLE_MOVES[enemyKingIndex] & square) != 0) {
-                return false;
-            }
-            enemyKing ^= SQUARE_TO_BITBOARD[enemyKingIndex];
+        int enemyKingIndex = Long.numberOfTrailingZeros(enemyKing);
+        if ((KING_POSSIBLE_MOVES[enemyKingIndex] & square) != 0) {
+            return false;
         }
-        return true;
-    }
+        enemyKing ^= SQUARE_TO_BITBOARD[enemyKingIndex];
 
-    /**
-     * @return current game status
-     */
-    GameStatus getGameStatus() {
-        return gameStatus;
+        return true;
     }
 
     /**
      * @return value of the board
      */
-    int evaluateBoard() {
+    int evaluateBoard(Move[] legalMoves) {
+        updateGameStatus(legalMoves);
         return switch (gameStatus) {
             // -Integer.MIN_VALUE == Integer.MIN_VALUE due to overflow
-            // TODO: Check if this is correct
             case CHECKMATE -> CHECKMATE_VAL;
             case STALEMATE, FIFTY_MOVE_RULE, THREEFOLD_REPETITION, INSUFFICIENT_MATERIAL -> 0;
             case NORMAL, CHECK -> evaluateBoardNormal();
@@ -1030,29 +1011,29 @@ class BitBoards {
         for (int i = 0; i < 64; i++) {
             long positionBitboard = SQUARE_TO_BITBOARD[i];
             if ((whitePawns & positionBitboard) != 0) {
-                score += PAWN_VAL + WHITE_PAWN_POS_VALUES[i];
+                score += PAWN_VAL * WHITE_PAWN_POS_VALUES[i];
             } else if ((whiteRooks & positionBitboard) != 0) {
-                score += ROOK_VAL + WHITE_ROOK_POS_VALUES[i];
+                score += ROOK_VAL * WHITE_ROOK_POS_VALUES[i];
             } else if ((whiteKnights & positionBitboard) != 0) {
-                score += KNIGHT_VAL + WHITE_KNIGHT_POS_VALUES[i];
+                score += KNIGHT_VAL * WHITE_KNIGHT_POS_VALUES[i];
             } else if ((whiteBishops & positionBitboard) != 0) {
-                score += BISHOP_VAL + WHITE_BISHOP_POS_VALUES[i];
+                score += BISHOP_VAL * WHITE_BISHOP_POS_VALUES[i];
             } else if ((whiteQueens & positionBitboard) != 0) {
-                score += QUEEN_VAL + WHITE_QUEEN_POS_VALUES[i];
+                score += QUEEN_VAL * WHITE_QUEEN_POS_VALUES[i];
             } else if ((whiteKing & positionBitboard) != 0) {
-                score += KING_VAL + WHITE_KING_POS_VALUES[i];
+                score += KING_VAL * WHITE_KING_POS_VALUES[i];
             } else if ((blackPawns & positionBitboard) != 0) {
-                score -= PAWN_VAL + BLACK_PAWN_POS_VALUES[i];
+                score -= PAWN_VAL * BLACK_PAWN_POS_VALUES[i];
             } else if ((blackRooks & positionBitboard) != 0) {
-                score -= ROOK_VAL + BLACK_ROOK_POS_VALUES[i];
+                score -= ROOK_VAL * BLACK_ROOK_POS_VALUES[i];
             } else if ((blackKnights & positionBitboard) != 0) {
-                score -= KNIGHT_VAL + BLACK_KNIGHT_POS_VALUES[i];
+                score -= KNIGHT_VAL * BLACK_KNIGHT_POS_VALUES[i];
             } else if ((blackBishops & positionBitboard) != 0) {
-                score -= BISHOP_VAL + BLACK_BISHOP_POS_VALUES[i];
+                score -= BISHOP_VAL * BLACK_BISHOP_POS_VALUES[i];
             } else if ((blackQueens & positionBitboard) != 0) {
-                score -= QUEEN_VAL + BLACK_QUEEN_POS_VALUES[i];
+                score -= QUEEN_VAL * BLACK_QUEEN_POS_VALUES[i];
             } else if ((blackKing & positionBitboard) != 0) {
-                score -= KING_VAL + BLACK_KING_POS_VALUES[i];
+                score -= KING_VAL * BLACK_KING_POS_VALUES[i];
             }
         }
 
