@@ -9,8 +9,6 @@ import java.util.Scanner;
 
 public class NegaMax {
     private final HashMap<String, Move[]> OPENING_BOOK;
-
-    // TODO: Implement transposition table
     private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
 
     public NegaMax() {
@@ -133,7 +131,7 @@ public class NegaMax {
      * @param state current state
      * @param depth current depth
      * @param alpha minimum score
-     * @param beta maximum score
+     * @param beta  maximum score
      * @param color color to move
      * @return the best score
      */

@@ -374,23 +374,23 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
      * @return array of booleans, [0] is left, [1] is right
      */
     static boolean[] castlingRights(Board board, PieceColor color) {
-        boolean left = true;
-        boolean right = true;
+        boolean queenSide = true;
+        boolean kingSide = true;
         Piece king = board.getPiece(color == WHITE ? Notation.E1 : Notation.E8);
         if (king == null || king.T != PieceType.KING || king.C != color || !king.state.turns.isEmpty()) {
-            left = false;
-            right = false;
+            queenSide = false;
+            kingSide = false;
         }
         Piece leftRook = board.getPiece(color == WHITE ? Notation.A1 : Notation.A8);
         if (leftRook == null || leftRook.T != PieceType.ROOK || leftRook.C != color || !leftRook.state.turns.isEmpty()) {
-            left = false;
+            queenSide = false;
         }
         Piece rightRook = board.getPiece(color == WHITE ? Notation.H1 : Notation.H8);
         if (rightRook == null || rightRook.T != PieceType.ROOK || rightRook.C != color || !rightRook.state.turns.isEmpty()) {
-            right = false;
+            kingSide = false;
         }
 
-        return new boolean[]{left, right};
+        return new boolean[]{kingSide, queenSide};
     }
 
     private static boolean castleLeftThisTurn(Board board, Piece king, Notation pos) {

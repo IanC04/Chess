@@ -290,7 +290,6 @@ class BitBoards {
     static final long[][] ROOK_ATTACKS = new long[64][];
     static final long[][] BISHOP_ATTACKS = new long[64][];
 
-    // TODO: Check for correctness
     static {
         for (int i = 0; i < 64; i++) {
             int positions = 1 << ROOK_RELEVANT_BITS[i];
@@ -1011,29 +1010,29 @@ class BitBoards {
         for (int i = 0; i < 64; i++) {
             long positionBitboard = SQUARE_TO_BITBOARD[i];
             if ((whitePawns & positionBitboard) != 0) {
-                score += PAWN_VAL * WHITE_PAWN_POS_VALUES[i];
+                score += PAWN_VAL + WHITE_PAWN_POS_VALUES[i];
             } else if ((whiteRooks & positionBitboard) != 0) {
-                score += ROOK_VAL * WHITE_ROOK_POS_VALUES[i];
+                score += ROOK_VAL + WHITE_ROOK_POS_VALUES[i];
             } else if ((whiteKnights & positionBitboard) != 0) {
-                score += KNIGHT_VAL * WHITE_KNIGHT_POS_VALUES[i];
+                score += KNIGHT_VAL + WHITE_KNIGHT_POS_VALUES[i];
             } else if ((whiteBishops & positionBitboard) != 0) {
-                score += BISHOP_VAL * WHITE_BISHOP_POS_VALUES[i];
+                score += BISHOP_VAL + WHITE_BISHOP_POS_VALUES[i];
             } else if ((whiteQueens & positionBitboard) != 0) {
-                score += QUEEN_VAL * WHITE_QUEEN_POS_VALUES[i];
+                score += QUEEN_VAL + WHITE_QUEEN_POS_VALUES[i];
             } else if ((whiteKing & positionBitboard) != 0) {
-                score += KING_VAL * WHITE_KING_POS_VALUES[i];
+                score += KING_VAL + WHITE_KING_POS_VALUES[i];
             } else if ((blackPawns & positionBitboard) != 0) {
-                score -= PAWN_VAL * BLACK_PAWN_POS_VALUES[i];
+                score -= PAWN_VAL + BLACK_PAWN_POS_VALUES[i];
             } else if ((blackRooks & positionBitboard) != 0) {
-                score -= ROOK_VAL * BLACK_ROOK_POS_VALUES[i];
+                score -= ROOK_VAL + BLACK_ROOK_POS_VALUES[i];
             } else if ((blackKnights & positionBitboard) != 0) {
-                score -= KNIGHT_VAL * BLACK_KNIGHT_POS_VALUES[i];
+                score -= KNIGHT_VAL + BLACK_KNIGHT_POS_VALUES[i];
             } else if ((blackBishops & positionBitboard) != 0) {
-                score -= BISHOP_VAL * BLACK_BISHOP_POS_VALUES[i];
+                score -= BISHOP_VAL + BLACK_BISHOP_POS_VALUES[i];
             } else if ((blackQueens & positionBitboard) != 0) {
-                score -= QUEEN_VAL * BLACK_QUEEN_POS_VALUES[i];
+                score -= QUEEN_VAL + BLACK_QUEEN_POS_VALUES[i];
             } else if ((blackKing & positionBitboard) != 0) {
-                score -= KING_VAL * BLACK_KING_POS_VALUES[i];
+                score -= KING_VAL + BLACK_KING_POS_VALUES[i];
             }
         }
 
