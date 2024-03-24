@@ -12,8 +12,11 @@ import javax.swing.*;
 
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.stage.DirectoryChooser;
 
+import javafx.util.Duration;
 import logic.Board;
 import logic.Move;
 import logic.Notation;
@@ -34,7 +37,9 @@ public class Game extends JFrame {
     private final UIToolBar uiToolBar;
 
     private Game() {
-        jfxPanel = new JFXPanel(); // Initializes JavaFX environment
+        // Initializes JavaFX environment
+        jfxPanel = new JFXPanel();
+
         // Initialize final variables
         uiStatusBar = new UIStatusBar();
         uiBoard = new UIBoard(uiStatusBar, new GridLayout(0, 9));
@@ -69,6 +74,8 @@ public class Game extends JFrame {
         if (icon.isFile()) {
             ImageIcon imageIcon = new ImageIcon(icon.getAbsolutePath());
             setIconImage(imageIcon.getImage());
+        } else {
+            System.err.println("No icon file");
         }
     }
 
@@ -81,6 +88,8 @@ class UIBoard extends JPanel {
     private final UIStatusBar uiStatusBar;
     private final Board logicBoard;
     private final JButton[][] squares;
+    private final MediaPlayer self_sound;
+    private final MediaPlayer capture_sound;
 
     private final AIStatus ai;
     // true if board is in white POV, false if board is in black POV
@@ -128,6 +137,11 @@ class UIBoard extends JPanel {
         this.selection = new Selection();
         this.selection.reset();
         initializeBoard();
+
+        this.self_sound =
+                new MediaPlayer(new Media(new File("src/ui/move-self.mp3").toURI().toString()));
+        this.capture_sound =
+                new MediaPlayer(new Media(new File("src/ui/move-capture.mp3").toURI().toString()));
     }
 
     private static final Color LIGHT_SQUARE = new Color(240, 217, 181);
@@ -319,7 +333,7 @@ class UIBoard extends JPanel {
     }
 
     /**
-     * TODO: Fix this
+     * TODO Fix this
      *
      * @param color true if board is in white POV, false if board is in black POV
      */
@@ -389,6 +403,13 @@ class UIBoard extends JPanel {
                 }
                 Piece captured = logicBoard.movePiece(selectedMove);
                 System.out.println("Captured: " + captured);
+                if (captured == null) {
+                    self_sound.seek(Duration.ZERO);
+                    self_sound.play();
+                } else {
+                    capture_sound.seek(Duration.ZERO);
+                    capture_sound.play();
+                }
                 Notation afterMove = logicBoard.getKing(logicBoard.currentPlayerColor);
                 byte[] afterMoveArr = afterMove.getPosition();
                 squares[afterMoveArr[0]][afterMoveArr[1]].setBackground(afterMoveArr[0] + afterMoveArr[1] % 2 == 0 ?

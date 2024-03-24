@@ -594,7 +594,7 @@ public class Board {
             }
         }
         if (!enPassantFound) {
-            fen.append(" -");
+            fen.append(' ').append('-');
         }
         // Half-move clock
         fen.append(' ').append(turn - lastHalfMove - 1);
