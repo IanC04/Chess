@@ -14,3 +14,7 @@ Chess game bundled with an AI. Started on 11/19/2023.
 ## Dependencies
 - [Java 21+](https://www.oracle.com/java/technologies/downloads/)
 - [JavaFX](https://gluonhq.com/products/javafx/)
+
+### Miscellaneous Commands
+- --module-path ${PATH_TO_FX} --add-modules javafx.controls,javafx.fxml,javafx.
+  swing,javafx.media
