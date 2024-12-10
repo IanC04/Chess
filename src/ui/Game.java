@@ -322,10 +322,8 @@ class UIBoard extends JPanel {
         if (!ai.aiPlayer) {
             // boardPOV = !boardPOV;
             // setBoardView(boardPOV);
-            return;
         }
-
-        if (ai.aiPlayer && logicBoard.currentPlayerColor == ai.aiColor) {
+        else if (logicBoard.currentPlayerColor == ai.aiColor) {
             logicBoard.aiMove();
             highlightKing();
             updateBoardMove();
@@ -427,8 +425,6 @@ class UIBoard extends JPanel {
                         uiStatusBar.setStatus(String.format("%s wins!",
                                 Piece.PieceColor.opposite(logicBoard.currentPlayerColor)));
                         yield true;
-                    default:
-                        throw new IllegalStateException("Invalid game status");
                 };
                 if (gameOver) {
                     System.out.println("Game Over");
@@ -551,7 +547,6 @@ class UIStatusBar extends JLabel {
     }
 
     void setStatus(String status) {
-        // System.out.println(status);
         setText(status);
     }
 }

@@ -14,12 +14,13 @@ public class MoveGeneration {
      * @param state current state
      * @return all legal moves in descending order of value
      */
+    @Deprecated
     static Move[] generateSortedLegalMoves(BitBoards state) {
         Move[] legalMoves = generateLegalMoves(state);
 
         // Negative since the highest value, aka best, should be first
         Arrays.sort(legalMoves,
-                Comparator.comparingInt(m -> -Move.movePositionValue(m, state.whiteToMove)));
+                Comparator.comparingInt(Move::movePositionValue));
         return legalMoves;
     }
 
@@ -29,7 +30,7 @@ public class MoveGeneration {
      * @param state current state
      * @return all legal moves
      */
-    private static Move[] generateLegalMoves(BitBoards state) {
+    static Move[] generateLegalMoves(BitBoards state) {
         Move[] moves = generateMoves(state);
         int index = 0;
         for (Move move : moves) {

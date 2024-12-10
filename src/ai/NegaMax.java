@@ -8,43 +8,47 @@ import java.util.List;
 import java.util.Scanner;
 
 public class NegaMax {
-    private final HashMap<String, Move[]> OPENING_BOOK;
+    private final HashMap<String, List<Move>> OPENING_BOOK = new HashMap<>();
     private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
 
     public NegaMax() {
-        this.OPENING_BOOK = new HashMap<>();
         parseOpeningBook();
     }
 
     private void parseOpeningBook() {
         try (Scanner scanner = new Scanner(new File("src/ai/Computations/opening_book.txt"))) {
-            String position = null;
-            List<Move> currentMoves = new ArrayList<>();
+            scanner.useDelimiter("pos ");
             while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                // Skip comments and empty lines
-                if (line.startsWith("#") || line.isBlank()) {
+                final String token = scanner.next();
+                if (token.startsWith("#") || token.isBlank()) {
                     continue;
                 }
-                if (line.startsWith("pos")) {
-                    if (position != null) {
-                        OPENING_BOOK.put(position, currentMoves.toArray(new Move[0]));
-                        currentMoves.clear();
-                    }
-                    position = line.substring(4);
-                    continue;
-                }
-                String[] args = line.split(" ");
-                int start = Move.notationToIndex(args[0].substring(0, 2));
-                int end = Move.notationToIndex(args[0].substring(2));
-                int value = Integer.parseInt(args[1]);
+
+                addPositionToBook(token);
+            }
+        } catch (FileNotFoundException e) {
+            System.err.println("Opening book not found: " + e.getMessage());
+        }
+    }
+
+    private void addPositionToBook(String token) {
+        try {
+            final Scanner scanner = new Scanner(token);
+            final String currentPosition = scanner.nextLine();
+            final List<Move> currentMoves = new ArrayList<>();
+
+            while (scanner.hasNextLine()) {
+                final String[] moveArgs = scanner.nextLine().split(" ");
+                int start = Move.notationToIndex(moveArgs[0].substring(0, 2));
+                int end = Move.notationToIndex(moveArgs[0].substring(2));
+                int value = Integer.parseInt(moveArgs[1]);
                 Move move = new Move(start, end, value);
                 currentMoves.add(move);
             }
-        } catch (FileNotFoundException e) {
-            System.err.println("Opening book not found");
+
+            OPENING_BOOK.put(currentPosition, List.of(currentMoves.toArray(new Move[0])));
         } catch (StringIndexOutOfBoundsException e) {
-            System.err.println("Opening book is malformed");
+            System.err.println("Opening book is malformed: " + e.getMessage());
         }
     }
 
@@ -57,14 +61,14 @@ public class NegaMax {
         String bookKey = removeMoveCounter(FEN);
         // System.out.println("Key: " + bookKey);
         if (OPENING_BOOK.containsKey(bookKey)) {
-            Move[] moves = OPENING_BOOK.get(bookKey);
-            Move move = moves[(int) (Math.random() * moves.length)];
+            List<Move> moves = OPENING_BOOK.get(bookKey);
+            Move move = moves.get((int) (Math.random() * moves.size()));
             return Move.indexToNotation(move.start()) + Move.indexToNotation(move.end());
         } else if (!bookKey.endsWith("-")) {
             bookKey = bookKey.substring(0, bookKey.lastIndexOf(' ')) + " -";
             if (OPENING_BOOK.containsKey(bookKey)) {
-                Move[] moves = OPENING_BOOK.get(bookKey);
-                Move move = moves[(int) (Math.random() * moves.length)];
+                List<Move> moves = OPENING_BOOK.get(bookKey);
+                Move move = moves.get((int) (Math.random() * moves.size()));
                 return Move.indexToNotation(move.start()) + Move.indexToNotation(move.end());
             }
         }
@@ -84,8 +88,7 @@ public class NegaMax {
             return openingMove;
         }
         BitBoards state = new BitBoards(FEN);
-        Move bestMove = rootNegaMax(state, 6, Integer.MIN_VALUE, Integer.MAX_VALUE,
-                state.whiteToMove);
+        Move bestMove = rootNegaMax(state, state.whiteToMove);
         if (bestMove == null) {
             throw new IllegalStateException("No move found");
         }
@@ -95,23 +98,20 @@ public class NegaMax {
     /**
      * Recursive minimax algorithm
      *
-     * @param depth current depth
-     * @param alpha minimum score
-     * @param beta  maximum score
      * @return the best move
      */
-    private Move rootNegaMax(BitBoards state, int depth, int alpha, int beta, boolean color) {
-        if (depth == 0) {
-            throw new IllegalArgumentException("Depth must be greater than 0");
-        }
+    private Move rootNegaMax(BitBoards state, boolean color) {
+        final int INITIAL_DEPTH = 4;
+        // So negation doesn't overflow
+        int alpha = Integer.MIN_VALUE + 1, beta = Integer.MAX_VALUE - 1;
 
-        Move[] allMoves = MoveGeneration.generateSortedLegalMoves(state);
+        Move[] allMoves = MoveGeneration.generateLegalMoves(state);
         if (allMoves.length == 0) {
             return null;
         }
         Move bestMove = new Move();
         for (Move move : allMoves) {
-            int value = -negaMax(state.tryMove(move), depth - 1, -beta, -alpha, !color);
+            int value = -negaMax(state.tryMove(move), INITIAL_DEPTH - 1, -beta, -alpha, !color);
             if (value > bestMove.value()) {
                 bestMove = new Move(move.start(), move.end(), move.moveType(),
                         move.pieceType(), value);
@@ -126,7 +126,6 @@ public class NegaMax {
 
     /**
      * Recursive negamax algorithm
-     * TODO: Add transposition table
      *
      * @param state current state
      * @param depth current depth
@@ -136,7 +135,7 @@ public class NegaMax {
      * @return the best score
      */
     private int negaMax(BitBoards state, int depth, int alpha, int beta, boolean color) {
-        Move[] allMoves = MoveGeneration.generateSortedLegalMoves(state);
+        Move[] allMoves = MoveGeneration.generateLegalMoves(state);
         if (depth == 0 || allMoves.length == 0) {
             return state.evaluateBoard(allMoves);
         }
@@ -152,5 +151,4 @@ public class NegaMax {
         }
         return bestValue;
     }
-
 }

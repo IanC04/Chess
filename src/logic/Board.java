@@ -625,14 +625,7 @@ public class Board {
         }
         // Promotion
         else if (originalPiece.T() == PAWN && destination.getPosition()[0] == (originalPiece.C() == WHITE ? 7 : 0)) {
-            movePiece(new Move(start, destination, Move.MoveType.PROMOTION,
-                    switch (Character.toUpperCase(move.charAt(5))) {
-                        case 'Q' -> QUEEN;
-                        case 'R' -> ROOK;
-                        case 'B' -> BISHOP;
-                        case 'N' -> KNIGHT;
-                        default -> throw new IllegalStateException("Invalid promotion");
-                    }));
+            movePiece(new Move(start, destination, Move.MoveType.PROMOTION, getPromotionType(move)));
         }
         // Castle
         else if (originalPiece.T() == KING && Math.abs(start.getPosition()[1] - destination.getPosition()[1]) == 2) {
@@ -640,6 +633,22 @@ public class Board {
         } else {
             movePiece(new Move(start, destination, Move.MoveType.NORMAL));
         }
+    }
+
+    private static Piece.PieceType getPromotionType(String move) {
+        Piece.PieceType promotionType;
+        if (move.toUpperCase().endsWith(QUEEN.name())) {
+            promotionType = QUEEN;
+        } else if (move.toUpperCase().endsWith(ROOK.name())) {
+            promotionType = ROOK;
+        } else if (move.toUpperCase().endsWith(KNIGHT.name())) {
+            promotionType = KNIGHT;
+        } else if (move.toUpperCase().endsWith(BISHOP.name())) {
+            promotionType = BISHOP;
+        } else {
+            throw new IllegalStateException("Invalid promotion");
+        }
+        return promotionType;
     }
 
     /**

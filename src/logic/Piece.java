@@ -347,7 +347,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
         // Castling
         boolean[] castlingRights = castlingRights(board, piece.C);
         // Left
-        if (castlingRights[0]) {
+        if (castlingRights[1]) {
             boolean canCastleLeft = castleLeftThisTurn(board, piece, pos);
             if (canCastleLeft) {
                 Move move = new Move(pos, Notation.get(posArr[0], 2), Move.MoveType.CASTLE);
@@ -355,7 +355,7 @@ public record Piece(PieceColor C, PieceType T, Board board, State state) {
             }
         }
         // Right
-        if (castlingRights[1]) {
+        if (castlingRights[0]) {
             boolean canCastleRight = castleRightThisTurn(board, piece, pos);
             if (canCastleRight) {
                 Move move = new Move(pos, Notation.get(posArr[0], 6), Move.MoveType.CASTLE);
